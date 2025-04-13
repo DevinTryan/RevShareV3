@@ -104,6 +104,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const id = parseInt(req.params.id);
       const agentData = req.body;
       
+      console.log("Updating agent with ID:", id);
+      console.log("Update data:", JSON.stringify(agentData, null, 2));
+      
       const updatedAgent = await storage.updateAgent(id, agentData);
       
       if (!updatedAgent) {
@@ -112,13 +115,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       res.json(updatedAgent);
     } catch (error) {
-      res.status(500).json({ message: "Failed to update agent" });
+      console.error("Error updating agent:", error);
+      res.status(500).json({ message: `Failed to update agent: ${error.message}` });
     }
   });
 
   app.delete("/api/agents/:id", requireAdmin, async (req: Request, res: Response) => {
     try {
       const id = parseInt(req.params.id);
+      
+      console.log("Deleting agent with ID:", id);
+      
       const success = await storage.deleteAgent(id);
       
       if (!success) {
@@ -127,7 +134,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       res.status(204).end();
     } catch (error) {
-      res.status(500).json({ message: "Failed to delete agent" });
+      console.error("Error deleting agent:", error);
+      res.status(500).json({ message: `Failed to delete agent: ${error.message}` });
     }
   });
 
