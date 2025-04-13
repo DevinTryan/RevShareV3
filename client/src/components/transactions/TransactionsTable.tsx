@@ -159,10 +159,7 @@ const TransactionsTable = ({ limit, showViewAll = false, onViewAllClick }: Trans
           <thead className="bg-gray-50">
             <tr>
               <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Agent
-              </th>
-              <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Property
+                Property & Agent
               </th>
               <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Date
@@ -183,20 +180,27 @@ const TransactionsTable = ({ limit, showViewAll = false, onViewAllClick }: Trans
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
             {displayedTransactions.map(transaction => (
-              <tr key={transaction.id} className="hover:bg-gray-50">
-                <td className="px-4 py-3 whitespace-nowrap">
-                  <div className="flex items-center">
-                    <div className={`h-8 w-8 rounded-full ${getAvatarColor(transaction.agent?.name)} flex items-center justify-center text-white font-medium`}>
-                      {getInitials(transaction.agent?.name)}
-                    </div>
-                    <div className="ml-3">
-                      <div className="text-sm font-medium text-gray-900">{transaction.agent?.name || "Unknown"}</div>
-                      <div className="text-xs text-gray-500">{transaction.agent?.agentType === 'principal' ? 'Principal' : 'Support'}</div>
+              <tr 
+                key={transaction.id} 
+                className="hover:bg-gray-50 cursor-pointer"
+                onClick={() => {
+                  setEditingTransaction(transaction);
+                  setIsEditDialogOpen(true);
+                }}
+              >
+                <td className="px-4 py-3">
+                  <div className="flex flex-col">
+                    <div className="text-sm font-bold text-gray-900 mb-1">{transaction.propertyAddress}</div>
+                    <div className="flex items-center">
+                      <div className={`h-8 w-8 rounded-full ${getAvatarColor(transaction.agent?.name)} flex items-center justify-center text-white font-medium`}>
+                        {getInitials(transaction.agent?.name)}
+                      </div>
+                      <div className="ml-2">
+                        <div className="text-xs text-gray-700">{transaction.agent?.name || "Unknown"}</div>
+                        <div className="text-xs text-gray-500">{transaction.agent?.agentType === 'principal' ? 'Principal' : 'Support'}</div>
+                      </div>
                     </div>
                   </div>
-                </td>
-                <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
-                  {transaction.propertyAddress}
                 </td>
                 <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
                   {format(new Date(transaction.transactionDate), 'MMM dd, yyyy')}
@@ -214,7 +218,8 @@ const TransactionsTable = ({ limit, showViewAll = false, onViewAllClick }: Trans
                   <Button 
                     variant="ghost" 
                     size="sm"
-                    onClick={() => {
+                    onClick={(e) => {
+                      e.stopPropagation();
                       setEditingTransaction(transaction);
                       setIsEditDialogOpen(true);
                     }}
