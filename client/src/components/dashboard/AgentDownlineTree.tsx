@@ -12,6 +12,8 @@ interface AgentDownlineTreeProps {
 }
 
 const AgentDownlineTree = ({ rootAgent, isLoading, onAddRecruit }: AgentDownlineTreeProps) => {
+  const [editingAgent, setEditingAgent] = useState<Agent | null>(null);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   if (isLoading) {
     return (
       <div className="flex justify-center items-center h-40">
@@ -75,7 +77,7 @@ const AgentDownlineTree = ({ rootAgent, isLoading, onAddRecruit }: AgentDownline
                 </Badge>
                 <span>
                   {agent.agentType === AgentType.PRINCIPAL 
-                    ? `$${agent.currentCap.toLocaleString()}/${agent.capType === 'team' ? '8,000' : '16,000'}`
+                    ? `$${(agent.currentCap || 0).toLocaleString()}/${agent.capType === 'team' ? '8,000' : '16,000'}`
                     : `$${agent.totalEarnings?.toLocaleString() || 0} GCI`}
                   
                   {/* Calculate time since anniversary date */}
@@ -85,9 +87,20 @@ const AgentDownlineTree = ({ rootAgent, isLoading, onAddRecruit }: AgentDownline
               </div>
             </div>
           </div>
-          <div className="text-right">
+          <div className="flex flex-col items-end">
             <div className="text-sm font-semibold">${agent.totalEarnings?.toLocaleString() || 0}</div>
-            <div className="text-xs text-gray-500">Revenue Share</div>
+            <div className="text-xs text-gray-500 mb-1">Revenue Share</div>
+            <Button 
+              variant="ghost" 
+              size="sm"
+              onClick={() => {
+                setEditingAgent(agent);
+                setIsEditDialogOpen(true);
+              }}
+              className="text-xs"
+            >
+              <i className="ri-edit-line mr-1"></i> Edit
+            </Button>
           </div>
         </div>
         
@@ -116,6 +129,21 @@ const AgentDownlineTree = ({ rootAgent, isLoading, onAddRecruit }: AgentDownline
 
   return (
     <div className="agent-card">
+      {/* Edit Agent Dialog */}
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
+          <DialogTitle className="text-lg font-semibold text-gray-900">
+            Edit Agent
+          </DialogTitle>
+          {editingAgent && (
+            <EditAgentForm
+              agent={editingAgent}
+              onClose={() => setIsEditDialogOpen(false)}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
+      
       {renderAgent(rootAgent)}
     </div>
   );
