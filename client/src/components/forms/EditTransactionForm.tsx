@@ -18,6 +18,8 @@ import {
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Slider } from "@/components/ui/slider";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import RevenueShareBreakdown from "@/components/transactions/RevenueShareBreakdown";
 
 const editTransactionSchema = z.object({
   agentId: z.number({ required_error: "Agent is required" }),
@@ -161,178 +163,191 @@ const EditTransactionForm = ({ transaction, onClose }: EditTransactionFormProps)
   return (
     <div className="bg-white rounded-lg">
       <div className="p-4">
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-            <FormField
-              control={form.control}
-              name="agentId"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Agent</FormLabel>
-                  <Select
-                    onValueChange={(value) => field.onChange(parseInt(value))}
-                    defaultValue={field.value.toString()}
-                    disabled={isLoadingAgents}
-                  >
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select agent" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {agents?.map((agent) => (
-                        <SelectItem key={agent.id} value={agent.id.toString()}>
-                          {agent.name} ({agent.agentType === 'principal' ? 'Principal' : 'Support'})
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+        <Tabs defaultValue="edit" className="w-full">
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="edit">Edit Transaction</TabsTrigger>
+            <TabsTrigger value="revenue-share">Revenue Share</TabsTrigger>
+          </TabsList>
+          
+          <TabsContent value="edit">
+            <Form {...form}>
+              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                <FormField
+                  control={form.control}
+                  name="agentId"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Agent</FormLabel>
+                      <Select
+                        onValueChange={(value) => field.onChange(parseInt(value))}
+                        defaultValue={field.value.toString()}
+                        disabled={isLoadingAgents}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select agent" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {agents?.map((agent) => (
+                            <SelectItem key={agent.id} value={agent.id.toString()}>
+                              {agent.name} ({agent.agentType === 'principal' ? 'Principal' : 'Support'})
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
 
-            <FormField
-              control={form.control}
-              name="propertyAddress"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Property Address</FormLabel>
-                  <FormControl>
-                    <Input {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+                <FormField
+                  control={form.control}
+                  name="propertyAddress"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Property Address</FormLabel>
+                      <FormControl>
+                        <Input {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="saleAmount"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Sale Amount ($)</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="number"
-                        step="0.01"
-                        min="0"
-                        onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
-                        value={field.value}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="saleAmount"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Sale Amount ($)</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                            value={field.value}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
 
-              <FormField
-                control={form.control}
-                name="commissionPercentage"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Commission Percentage (%)</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="number"
-                        step="0.1"
-                        min="0"
-                        onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
-                        value={field.value}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-
-            <FormField
-              control={form.control}
-              name="transactionDate"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Transaction Date</FormLabel>
-                  <FormControl>
-                    <Input type="date" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <div className="pt-4 border-t border-gray-200">
-              <h3 className="text-sm font-medium text-gray-900 mb-3">Commission Split</h3>
-              
-              <div className="bg-gray-50 rounded-lg p-4 mb-4">
-                <div className="flex justify-between items-center mb-2">
-                  <span className="text-sm text-gray-600">Total Commission:</span>
-                  <span className="font-semibold">${totalCommission.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                  <FormField
+                    control={form.control}
+                    name="commissionPercentage"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Commission Percentage (%)</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="number"
+                            step="0.1"
+                            min="0"
+                            onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                            value={field.value}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
                 </div>
-                
-                <div className="flex mb-2">
-                  <div className="w-full bg-gray-200 rounded-full h-2.5">
-                    <div className="bg-primary-600 h-2.5 rounded-full" style={{ width: `${companyPercentage}%` }}></div>
+
+                <FormField
+                  control={form.control}
+                  name="transactionDate"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Transaction Date</FormLabel>
+                      <FormControl>
+                        <Input type="date" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <div className="pt-4 border-t border-gray-200">
+                  <h3 className="text-sm font-medium text-gray-900 mb-3">Commission Split</h3>
+                  
+                  <div className="bg-gray-50 rounded-lg p-4 mb-4">
+                    <div className="flex justify-between items-center mb-2">
+                      <span className="text-sm text-gray-600">Total Commission:</span>
+                      <span className="font-semibold">${totalCommission.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                    </div>
+                    
+                    <div className="flex mb-2">
+                      <div className="w-full bg-gray-200 rounded-full h-2.5">
+                        <div className="bg-primary-600 h-2.5 rounded-full" style={{ width: `${companyPercentage}%` }}></div>
+                      </div>
+                    </div>
+                    
+                    <div className="flex justify-between text-xs text-gray-500">
+                      <span>Company: {companyPercentage}% (${companyGCI.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })})</span>
+                      <span>Agent: {(100 - companyPercentage)}% (${agentShare.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })})</span>
+                    </div>
+                  </div>
+                  
+                  <FormField
+                    control={form.control}
+                    name="companyPercentage"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Company Percentage: {field.value}%</FormLabel>
+                        <FormControl>
+                          <Slider
+                            min={0}
+                            max={100}
+                            step={1}
+                            value={[field.value]}
+                            onValueChange={(vals) => field.onChange(vals[0])}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                <div className="flex flex-col-reverse md:flex-row justify-between pt-4">
+                  <Button
+                    type="button"
+                    variant="destructive"
+                    onClick={handleDelete}
+                    disabled={updateTransactionMutation.isPending || deleteTransactionMutation.isPending}
+                  >
+                    {deleteTransactionMutation.isPending ? "Deleting..." : "Delete Transaction"}
+                  </Button>
+                  
+                  <div className="flex space-x-2 mb-3 md:mb-0">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={onClose}
+                      disabled={updateTransactionMutation.isPending || deleteTransactionMutation.isPending}
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      type="submit"
+                      disabled={updateTransactionMutation.isPending || deleteTransactionMutation.isPending}
+                    >
+                      {updateTransactionMutation.isPending ? "Saving..." : "Save Changes"}
+                    </Button>
                   </div>
                 </div>
-                
-                <div className="flex justify-between text-xs text-gray-500">
-                  <span>Company: {companyPercentage}% (${companyGCI.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })})</span>
-                  <span>Agent: {(100 - companyPercentage)}% (${agentShare.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })})</span>
-                </div>
-              </div>
-              
-              <FormField
-                control={form.control}
-                name="companyPercentage"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Company Percentage: {field.value}%</FormLabel>
-                    <FormControl>
-                      <Slider
-                        min={0}
-                        max={100}
-                        step={1}
-                        value={[field.value]}
-                        onValueChange={(vals) => field.onChange(vals[0])}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-
-            <div className="flex flex-col-reverse md:flex-row justify-between pt-4">
-              <Button
-                type="button"
-                variant="destructive"
-                onClick={handleDelete}
-                disabled={updateTransactionMutation.isPending || deleteTransactionMutation.isPending}
-              >
-                {deleteTransactionMutation.isPending ? "Deleting..." : "Delete Transaction"}
-              </Button>
-              
-              <div className="flex space-x-2 mb-3 md:mb-0">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={onClose}
-                  disabled={updateTransactionMutation.isPending || deleteTransactionMutation.isPending}
-                >
-                  Cancel
-                </Button>
-                <Button
-                  type="submit"
-                  disabled={updateTransactionMutation.isPending || deleteTransactionMutation.isPending}
-                >
-                  {updateTransactionMutation.isPending ? "Saving..." : "Save Changes"}
-                </Button>
-              </div>
-            </div>
-          </form>
-        </Form>
+              </form>
+            </Form>
+          </TabsContent>
+          
+          <TabsContent value="revenue-share" className="py-4">
+            <RevenueShareBreakdown transaction={transaction} />
+          </TabsContent>
+        </Tabs>
       </div>
     </div>
   );
