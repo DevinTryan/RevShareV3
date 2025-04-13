@@ -127,6 +127,13 @@ function AppRoutes() {
           </AppLayout>
         </ProtectedRoute>
       </Route>
+      <Route path="/admin/users">
+        <ProtectedRoute>
+          <AppLayout>
+            <UsersPage />
+          </AppLayout>
+        </ProtectedRoute>
+      </Route>
       <Route>
         <NotFound />
       </Route>

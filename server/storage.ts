@@ -36,6 +36,7 @@ export interface IStorage {
   createRevenueShare(revenueShare: InsertRevenueShare): Promise<RevenueShare>;
   
   // User operations
+  getUsers(): Promise<User[]>;
   getUser(id: number): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
@@ -394,6 +395,10 @@ export class MemStorage implements IStorage {
   }
 
   // User operations
+  async getUsers(): Promise<User[]> {
+    return Array.from(this.users.values());
+  }
+  
   async getUser(id: number): Promise<User | undefined> {
     return this.users.get(id);
   }
