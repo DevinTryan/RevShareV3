@@ -9,6 +9,7 @@ import EditTransactionForm from "@/components/forms/EditTransactionForm";
 interface CombinedTransaction extends Transaction {
   agent?: Agent;
   revenueShareTotal?: number;
+  agentName?: string; // Combined name from either agent or agentNameArchived
 }
 
 interface TransactionsTableProps {
@@ -52,7 +53,15 @@ const TransactionsTable = ({ limit, showViewAll = false, onViewAllClick }: Trans
         revenueShareTotal = transactionShares.reduce((sum, share) => sum + share.amount, 0);
       }
       
-      return { ...transaction, agent, revenueShareTotal };
+      // Get agent name from either active agent or archived agent name
+      const agentName = agent?.name || transaction.agentNameArchived || "Unknown";
+      
+      return { 
+        ...transaction, 
+        agent, 
+        revenueShareTotal,
+        agentName 
+      };
     }).sort((a, b) => new Date(b.transactionDate).getTime() - new Date(a.transactionDate).getTime());
   }, [transactions, agents, revenueShares]);
   
@@ -192,12 +201,19 @@ const TransactionsTable = ({ limit, showViewAll = false, onViewAllClick }: Trans
                   <div className="flex flex-col">
                     <div className="text-sm font-bold text-gray-900 mb-1">{transaction.propertyAddress}</div>
                     <div className="flex items-center">
-                      <div className={`h-8 w-8 rounded-full ${getAvatarColor(transaction.agent?.name)} flex items-center justify-center text-white font-medium`}>
-                        {getInitials(transaction.agent?.name)}
+                      <div className={`h-8 w-8 rounded-full ${getAvatarColor(transaction.agentName)} flex items-center justify-center text-white font-medium`}>
+                        {getInitials(transaction.agentName)}
                       </div>
                       <div className="ml-2">
-                        <div className="text-xs text-gray-700">{transaction.agent?.name || "Unknown"}</div>
-                        <div className="text-xs text-gray-500">{transaction.agent?.agentType === 'principal' ? 'Principal' : 'Support'}</div>
+                        <div className="text-xs text-gray-700">
+                          {transaction.agentName}
+                          {transaction.agentNameArchived && !transaction.agent && <span className="ml-1 text-gray-500">(deleted)</span>}
+                        </div>
+                        <div className="text-xs text-gray-500">
+                          {transaction.agent ? 
+                            (transaction.agent.agentType === 'principal' ? 'Principal' : 'Support') : 
+                            'Former Agent'}
+                        </div>
                       </div>
                     </div>
                   </div>
