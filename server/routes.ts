@@ -10,6 +10,16 @@ import {
 import { z } from "zod";
 import { ZodError } from "zod";
 import { fromZodError } from "zod-validation-error";
+import { 
+  registerWebhook, 
+  listWebhooks, 
+  deleteWebhook, 
+  validateWebhookSignature, 
+  processTransactionWebhook, 
+  processAgentWebhook,
+  handleZapierTest,
+  triggerWebhooks 
+} from "./webhooks";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // API Routes for Agents
@@ -248,6 +258,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: "Failed to fetch agent revenue shares" });
     }
   });
+
+  // Webhook Routes for Zapier Integration
+  
+  // Management endpoints for webhooks
+  app.post("/api/webhooks", registerWebhook);
+  app.get("/api/webhooks", listWebhooks);
+  app.delete("/api/webhooks/:id", deleteWebhook);
+  
+  // Webhook endpoints for Zapier to send data to our app
+  app.post("/api/webhooks/zapier/transaction", validateWebhookSignature, processTransactionWebhook);
+  app.post("/api/webhooks/zapier/agent", validateWebhookSignature, processAgentWebhook);
+  
+  // Webhook test endpoint
+  app.post("/api/webhooks/test", handleZapierTest);
+  
+  // Add a hook to trigger webhooks whenever transactions are created
+  const originalCreateTransaction = storage.createTransaction;
+  storage.createTransaction = async (data) => {
+    const transaction = await originalCreateTransaction(data);
+    // Trigger webhook after transaction is created
+    triggerWebhooks('transaction.created', transaction);
+    return transaction;
+  };
+  
+  // Add a hook for agent creation
+  const originalCreateAgent = storage.createAgent;
+  storage.createAgent = async (data) => {
+    const agent = await originalCreateAgent(data);
+    // Trigger webhook after agent is created
+    triggerWebhooks('agent.created', agent);
+    return agent;
+  };
 
   // Create server
   const httpServer = createServer(app);

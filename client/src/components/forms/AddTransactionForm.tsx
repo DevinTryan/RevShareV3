@@ -14,17 +14,56 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
-import { calculateCommission, calculateCompanyGCI, calculateAgentShare, calculateRevenueSharePool } from "@/utils/calculators";
+import { 
+  calculateCommission, 
+  calculateCompanyGCI, 
+  calculateAgentShare, 
+  calculateRevenueSharePool,
+  calculateAgentCommissionAmount,
+  getSupportAgentTier,
+  getSupportAgentCommissionPercentage,
+  calculateTotalCommissionWithCompliance,
+  calculateShowingAgentFee
+} from "@/utils/calculators";
 
 const formSchema = z.object({
+  // Basic transaction info
   agentId: z.number({ required_error: "Agent is required" }),
   propertyAddress: z.string().min(5, { message: "Property address is required" }),
+  clientName: z.string().optional(),
+  transactionType: z.enum(["buyer", "seller"]).default("buyer"),
   saleAmount: z.number().positive({ message: "Sale amount must be positive" }),
   commissionPercentage: z.number().positive({ message: "Commission percentage must be positive" }),
+  transactionDate: z.string(),
+  
+  // Lead source and commission settings
+  leadSource: z.enum([
+    "self_generated", "company_provided", "referral", "soi",
+    "zillow", "google", "facebook", "instagram", "open_house",
+    "expired", "past_client", "other"
+  ]).default("self_generated"),
+  isCompanyProvided: z.boolean().default(false),
+  isSelfGenerated: z.boolean().default(true),
+  
+  // Commission calculation flags and values
   manualCommission: z.boolean().default(false),
   totalCommission: z.number().optional(),
   companyGCI: z.number().optional(),
-  transactionDate: z.string(),
+  agentCommissionPercentage: z.number().optional(),
+  agentCommissionAmount: z.number().optional(),
+  
+  // Compliance fee settings
+  complianceFeePaidByClient: z.boolean().default(false),
+  
+  // Referrals and showing agents
+  hasReferral: z.boolean().default(false),
+  referralPercentage: z.number().min(0).max(100).default(0),
+  referralAmount: z.number().default(0),
+  
+  hasShowingAgent: z.boolean().default(false),
+  showingAgentId: z.number().optional(),
+  showingAgentPercentage: z.number().min(0).max(100).default(10),
+  showingAgentFee: z.number().default(0),
 });
 
 interface AddTransactionFormProps {
