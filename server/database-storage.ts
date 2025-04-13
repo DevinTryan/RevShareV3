@@ -207,7 +207,7 @@ export class DatabaseStorage implements IStorage {
 
   async getTransaction(id: number): Promise<Transaction | undefined> {
     try {
-      // Use raw SQL to select only columns that exist in the database
+      // Use raw SQL to select all columns that exist in the database
       const sql = `
         SELECT 
           id, 
@@ -227,12 +227,40 @@ export class DatabaseStorage implements IStorage {
           referral_amount as "referralAmount", 
           showing_agent_id as "showingAgentId", 
           showing_agent_fee as "showingAgentFee", 
-          agent_commission_amount as "agentCommissionAmount"
+          agent_commission_amount as "agentCommissionAmount",
+          source,
+          company_name as "companyName",
+          escrow_office as "escrowOffice",
+          escrow_officer as "escrowOfficer",
+          referrer,
+          lender,
+          seller_commission_percentage as "sellerCommissionPercentage",
+          buyer_commission_percentage as "buyerCommissionPercentage",
+          compliance_fee as "complianceFee",
+          referral_fee as "referralFee",
+          showing_agent as "showingAgent",
+          team_agents_income as "teamAgentsIncome",
+          personal_income as "personalIncome",
+          actual_check_amount as "actualCheckAmount",
+          manual_commission_amount as "manualCommissionAmount",
+          additional_agent_id as "additionalAgentId",
+          additional_agent_fee as "additionalAgentFee",
+          additional_agent_percentage as "additionalAgentPercentage",
+          agent_name_archived as "agentNameArchived",
+          referral_type as "referralType",
+          referral_agent_name as "referralAgentName",
+          referral_brokerage_name as "referralBrokerageName",
+          office_gross_commission as "officeGrossCommission",
+          transaction_coordinator_fee as "transactionCoordinatorFee",
+          compliance_fee_paid_by_client as "complianceFeePaidByClient",
+          deposit_amount as "depositAmount",
+          deposit_date as "depositDate",
+          additional_agent_cost as "additionalAgentCost"
         FROM transactions
         WHERE id = $1
       `;
       
-      const result = await db.execute(sql, [id]);
+      const result = await db.execute(sql, [id]) as any[];
       return result.length ? result[0] as Transaction : undefined;
     } catch (error) {
       console.error("Error retrieving transaction:", error);
@@ -423,12 +451,20 @@ export class DatabaseStorage implements IStorage {
           additional_agent_fee as "additionalAgentFee",
           additional_agent_percentage as "additionalAgentPercentage",
           additional_agent_cost as "additionalAgentCost",
-          agent_name_archived as "agentNameArchived"
+          agent_name_archived as "agentNameArchived",
+          referral_type as "referralType",
+          referral_agent_name as "referralAgentName",
+          referral_brokerage_name as "referralBrokerageName",
+          office_gross_commission as "officeGrossCommission",
+          transaction_coordinator_fee as "transactionCoordinatorFee",
+          compliance_fee_paid_by_client as "complianceFeePaidByClient",
+          deposit_amount as "depositAmount",
+          deposit_date as "depositDate"
       `;
       
       console.log("Executing update SQL:", sql, values);
       
-      const result = await db.execute(sql, values);
+      const result = await db.execute(sql, values) as any[];
       
       if (!result || result.length === 0) {
         throw new Error("Failed to update transaction: No result returned");
@@ -804,7 +840,7 @@ export class DatabaseStorage implements IStorage {
         ? `WHERE ${conditions.join(' AND ')}` 
         : '';
       
-      // Use raw SQL to select only columns that exist in the database
+      // Use raw SQL to select all columns that exist in the database
       const sql = `
         SELECT 
           id, 
@@ -824,7 +860,35 @@ export class DatabaseStorage implements IStorage {
           referral_amount as "referralAmount", 
           showing_agent_id as "showingAgentId", 
           showing_agent_fee as "showingAgentFee", 
-          agent_commission_amount as "agentCommissionAmount"
+          agent_commission_amount as "agentCommissionAmount",
+          source,
+          company_name as "companyName",
+          escrow_office as "escrowOffice",
+          escrow_officer as "escrowOfficer",
+          referrer,
+          lender,
+          seller_commission_percentage as "sellerCommissionPercentage",
+          buyer_commission_percentage as "buyerCommissionPercentage",
+          compliance_fee as "complianceFee",
+          referral_fee as "referralFee",
+          showing_agent as "showingAgent",
+          team_agents_income as "teamAgentsIncome",
+          personal_income as "personalIncome",
+          actual_check_amount as "actualCheckAmount",
+          manual_commission_amount as "manualCommissionAmount",
+          additional_agent_id as "additionalAgentId",
+          additional_agent_fee as "additionalAgentFee",
+          additional_agent_percentage as "additionalAgentPercentage",
+          additional_agent_cost as "additionalAgentCost",
+          agent_name_archived as "agentNameArchived",
+          referral_type as "referralType",
+          referral_agent_name as "referralAgentName",
+          referral_brokerage_name as "referralBrokerageName",
+          office_gross_commission as "officeGrossCommission",
+          transaction_coordinator_fee as "transactionCoordinatorFee",
+          compliance_fee_paid_by_client as "complianceFeePaidByClient",
+          deposit_amount as "depositAmount",
+          deposit_date as "depositDate"
         FROM transactions
         ${whereClause}
         ORDER BY transaction_date DESC
@@ -832,7 +896,7 @@ export class DatabaseStorage implements IStorage {
       
       console.log("Executing filtered transactions query:", sql, params);
       
-      const result = await db.execute(sql, params);
+      const result = await db.execute(sql, params) as any[];
       return result as Transaction[];
     } catch (error) {
       console.error("Error retrieving filtered transactions:", error);
