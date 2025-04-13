@@ -121,7 +121,7 @@ const UsersPage = () => {
   });
 
   // Fetch agents for select dropdown
-  const { data: agents } = useQuery({
+  const { data: agents = [] } = useQuery<any[]>({
     queryKey: ['/api/agents'],
   });
 
