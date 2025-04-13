@@ -388,26 +388,31 @@ const EditTransactionForm = ({ transaction, onClose }: EditTransactionFormProps)
   const submitForm = (e: React.MouseEvent) => {
     e.preventDefault();
     console.log("Direct form submit clicked");
-    console.log("Current form values:", form.getValues());
-    console.log("Form state:", form.formState);
     
-    // Fix validation errors by providing default values for required fields
-    const values = form.getValues();
-    
-    // Fix company percentage if null or undefined
-    if (values.companyPercentage === null || values.companyPercentage === undefined) {
-      console.log("Fixing missing companyPercentage with default 15%");
-      form.setValue("companyPercentage", 15);
-    }
-    
-    // Force setting companyPercentage to fix validation issues
-    form.setValue("companyPercentage", values.companyPercentage || 15);
-    
-    // Submit directly without further validation
     try {
-      console.log("Manually triggering form submission with fixed values");
-      const updatedValues = form.getValues();
-      console.log("Updated form values:", updatedValues);
+      const values = form.getValues();
+      
+      // Fix company percentage if null or undefined
+      const companyPercentage = values.companyPercentage ?? 15;
+      form.setValue("companyPercentage", companyPercentage);
+      
+      // Calculate commission
+      const commission = values.manualCommissionEntry ? 
+        values.manualCommissionAmount : 
+        (values.saleAmount * values.commissionPercentage) / 100;
+      
+      // Calculate companyGCI based on commission and company percentage
+      const companyGCI = values.manualCompanyGCI ?
+        values.manualCompanyGCIAmount :
+        (commission * companyPercentage) / 100;
+      
+      const updatedValues = {
+        ...values,
+        companyGCI,
+        companyPercentage
+      };
+      
+      console.log("Submitting with calculated values:", updatedValues);
       updateTransactionMutation.mutate(updatedValues);
     } catch (err) {
       console.error("Error in direct submit:", err);
