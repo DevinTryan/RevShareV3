@@ -477,11 +477,14 @@ export class DatabaseStorage implements IStorage {
     let query = db.select().from(transactions);
     
     // Apply date range filter
-    if (filters.dateRange) {
+    if (filters.startDate && filters.endDate) {
+      const startDate = new Date(filters.startDate);
+      const endDate = new Date(filters.endDate);
+      
       query = query.where(
         and(
-          sql`${transactions.transactionDate} >= ${filters.dateRange.start}`,
-          sql`${transactions.transactionDate} <= ${filters.dateRange.end}`
+          sql`${transactions.transactionDate} >= ${startDate}`,
+          sql`${transactions.transactionDate} <= ${endDate}`
         )
       );
     }
@@ -535,13 +538,13 @@ export class DatabaseStorage implements IStorage {
     
     // Apply date range filter
     if (filters.dateRange) {
-      conditions.push(sql`${transactions.transactionDate} >= ${filters.dateRange.start}`);
-      conditions.push(sql`${transactions.transactionDate} <= ${filters.dateRange.end}`);
+      conditions.push(sql`t.transaction_date >= ${filters.dateRange.start}`);
+      conditions.push(sql`t.transaction_date <= ${filters.dateRange.end}`);
     }
     
     // Apply agent filter if specified
     if (filters.agentId) {
-      conditions.push(sql`${transactions.agentId} = ${filters.agentId}`);
+      conditions.push(sql`t.agent_id = ${filters.agentId}`);
     }
     
     const whereClause = conditions.length > 0 ? sql`WHERE ${sql.join(conditions, sql` AND `)}` : sql``;
@@ -577,13 +580,13 @@ export class DatabaseStorage implements IStorage {
     
     // Apply date range filter
     if (filters.dateRange) {
-      conditions.push(sql`${transactions.transactionDate} >= ${filters.dateRange.start}`);
-      conditions.push(sql`${transactions.transactionDate} <= ${filters.dateRange.end}`);
+      conditions.push(sql`t.transaction_date >= ${filters.dateRange.start}`);
+      conditions.push(sql`t.transaction_date <= ${filters.dateRange.end}`);
     }
     
     // Apply agent filter if specified
     if (filters.agentId) {
-      conditions.push(sql`${transactions.agentId} = ${filters.agentId}`);
+      conditions.push(sql`t.agent_id = ${filters.agentId}`);
     }
     
     const whereClause = conditions.length > 0 ? sql`WHERE ${sql.join(conditions, sql` AND `)}` : sql``;
@@ -616,13 +619,13 @@ export class DatabaseStorage implements IStorage {
     
     // Apply date range filter
     if (filters.dateRange) {
-      conditions.push(sql`${transactions.transactionDate} >= ${filters.dateRange.start}`);
-      conditions.push(sql`${transactions.transactionDate} <= ${filters.dateRange.end}`);
+      conditions.push(sql`t.transaction_date >= ${filters.dateRange.start}`);
+      conditions.push(sql`t.transaction_date <= ${filters.dateRange.end}`);
     }
     
     // Apply agent filter if specified
     if (filters.agentId) {
-      conditions.push(sql`${transactions.agentId} = ${filters.agentId}`);
+      conditions.push(sql`t.agent_id = ${filters.agentId}`);
     }
     
     const whereClause = conditions.length > 0 ? sql`WHERE ${sql.join(conditions, sql` AND `)}` : sql``;
@@ -654,8 +657,8 @@ export class DatabaseStorage implements IStorage {
     
     // Apply date range filter
     if (filters.dateRange) {
-      conditions.push(sql`${transactions.transactionDate} >= ${filters.dateRange.start}`);
-      conditions.push(sql`${transactions.transactionDate} <= ${filters.dateRange.end}`);
+      conditions.push(sql`t.transaction_date >= ${filters.dateRange.start}`);
+      conditions.push(sql`t.transaction_date <= ${filters.dateRange.end}`);
     }
     
     const whereClause = conditions.length > 0 ? sql`WHERE ${sql.join(conditions, sql` AND `)}` : sql``;

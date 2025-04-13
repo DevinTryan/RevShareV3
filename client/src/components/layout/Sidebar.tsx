@@ -37,7 +37,7 @@ const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
         )}
       >
         <div className="p-4 border-b border-gray-200">
-          <h1 className="text-xl font-semibold text-primary-600">Revenue Share</h1>
+          <h1 className="text-xl font-semibold text-primary-600">Talk Data</h1>
           <p className="text-sm text-gray-500">Agent Management System</p>
         </div>
         
