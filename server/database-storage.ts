@@ -199,6 +199,66 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
+  async updateTransaction(id: number, transactionUpdate: Partial<Transaction>): Promise<Transaction | undefined> {
+    try {
+      // Get the current transaction
+      const existingTransaction = await this.getTransaction(id);
+      if (!existingTransaction) return undefined;
+      
+      // Save old companyGCI for comparison
+      const oldCompanyGCI = existingTransaction.companyGCI;
+      
+      // Format date if provided
+      let updatedValues: any = { ...transactionUpdate };
+      if (updatedValues.transactionDate && typeof updatedValues.transactionDate === 'string') {
+        updatedValues.transactionDate = new Date(updatedValues.transactionDate);
+      }
+      
+      // Update transaction in database
+      const [updatedTransaction] = await db
+        .update(transactions)
+        .set(updatedValues)
+        .where(eq(transactions.id, id))
+        .returning();
+      
+      // If companyGCI has changed, update revenue shares
+      if (oldCompanyGCI !== updatedTransaction.companyGCI) {
+        // Delete old revenue shares
+        await db
+          .delete(revenueShares)
+          .where(eq(revenueShares.transactionId, id));
+        
+        // Process new revenue shares
+        await this.processRevenueShare(updatedTransaction);
+      }
+      
+      return updatedTransaction;
+    } catch (error) {
+      console.error("Error updating transaction:", error);
+      return undefined;
+    }
+  }
+  
+  async deleteTransaction(id: number): Promise<boolean> {
+    try {
+      // Delete associated revenue shares first
+      await db
+        .delete(revenueShares)
+        .where(eq(revenueShares.transactionId, id));
+      
+      // Delete the transaction
+      const result = await db
+        .delete(transactions)
+        .where(eq(transactions.id, id))
+        .returning({ id: transactions.id });
+      
+      return result.length > 0;
+    } catch (error) {
+      console.error("Error deleting transaction:", error);
+      return false;
+    }
+  }
+  
   async getAgentTransactions(agentId: number): Promise<Transaction[]> {
     return await db
       .select()

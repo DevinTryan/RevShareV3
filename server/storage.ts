@@ -20,6 +20,8 @@ export interface IStorage {
   getTransactions(): Promise<Transaction[]>;
   getTransaction(id: number): Promise<Transaction | undefined>;
   createTransaction(transaction: InsertTransaction): Promise<Transaction>;
+  updateTransaction(id: number, transaction: Partial<Transaction>): Promise<Transaction | undefined>;
+  deleteTransaction(id: number): Promise<boolean>;
   getAgentTransactions(agentId: number): Promise<Transaction[]>;
   
   // Revenue share operations
@@ -178,6 +180,49 @@ export class MemStorage implements IStorage {
     return transaction;
   }
 
+  async updateTransaction(id: number, transactionUpdate: Partial<Transaction>): Promise<Transaction | undefined> {
+    const transaction = this.transactions.get(id);
+    if (!transaction) return undefined;
+    
+    // Save old companyGCI value for comparison
+    const oldCompanyGCI = transaction.companyGCI;
+    
+    const updatedTransaction = { ...transaction, ...transactionUpdate };
+    this.transactions.set(id, updatedTransaction);
+    
+    // If companyGCI has changed, we need to update revenue shares
+    if (oldCompanyGCI !== updatedTransaction.companyGCI) {
+      // First, delete old revenue shares for this transaction
+      const revenueShares = Array.from(this.revenueShares.values());
+      const transactionShares = revenueShares.filter(share => share.transactionId === id);
+      
+      for (const share of transactionShares) {
+        this.revenueShares.delete(share.id);
+      }
+      
+      // Then process new revenue shares
+      await this.processRevenueShare(updatedTransaction);
+    }
+    
+    return updatedTransaction;
+  }
+  
+  async deleteTransaction(id: number): Promise<boolean> {
+    const transaction = this.transactions.get(id);
+    if (!transaction) return false;
+    
+    // Delete all revenue shares associated with this transaction
+    const revenueShares = Array.from(this.revenueShares.values());
+    const transactionShares = revenueShares.filter(share => share.transactionId === id);
+    
+    for (const share of transactionShares) {
+      this.revenueShares.delete(share.id);
+    }
+    
+    // Delete the transaction
+    return this.transactions.delete(id);
+  }
+  
   async getAgentTransactions(agentId: number): Promise<Transaction[]> {
     const transactions = Array.from(this.transactions.values());
     return transactions.filter(transaction => transaction.agentId === agentId);

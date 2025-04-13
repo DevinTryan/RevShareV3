@@ -178,6 +178,46 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: "Failed to create transaction" });
     }
   });
+  
+  app.put("/api/transactions/:id", async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      const data = req.body;
+      
+      // If manually adjusting the company share vs agent share
+      if (data.totalCommissionAmount && data.companyPercentage) {
+        const totalCommission = data.totalCommissionAmount;
+        const companyPercentage = data.companyPercentage;
+        data.companyGCI = (totalCommission * companyPercentage) / 100;
+      }
+      
+      const updatedTransaction = await storage.updateTransaction(id, data);
+      
+      if (!updatedTransaction) {
+        return res.status(404).json({ message: "Transaction not found" });
+      }
+      
+      res.json(updatedTransaction);
+    } catch (error) {
+      console.error("Transaction update error:", error);
+      res.status(500).json({ message: "Failed to update transaction" });
+    }
+  });
+  
+  app.delete("/api/transactions/:id", async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      const success = await storage.deleteTransaction(id);
+      
+      if (!success) {
+        return res.status(404).json({ message: "Transaction not found" });
+      }
+      
+      res.status(204).end();
+    } catch (error) {
+      res.status(500).json({ message: "Failed to delete transaction" });
+    }
+  });
 
   // API Routes for Revenue Shares
   app.get("/api/revenue-shares", async (req: Request, res: Response) => {
