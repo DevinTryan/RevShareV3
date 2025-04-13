@@ -128,6 +128,56 @@ export default function SimpleTransactionForm({ transaction }: SimpleTransaction
       });
     },
   });
+  
+  // Update transaction mutation
+  const updateTransactionMutation = useMutation({
+    mutationFn: async (values: TransactionFormValues) => {
+      if (!transaction?.id) {
+        throw new Error("Transaction ID is missing");
+      }
+      
+      // Calculate commission percentage (default to 3% if can't be calculated)
+      const commissionPercent = totalGCI > 0 && values.saleAmount > 0 
+        ? Number(((totalGCI / values.saleAmount) * 100).toFixed(2))
+        : 3;
+        
+      const payload = {
+        agentId: values.agentId,
+        propertyAddress: values.propertyAddress,
+        saleAmount: values.saleAmount,
+        companyGCI: values.companyGCI,
+        transactionDate: values.transactionDate.toISOString().split('T')[0],
+        commissionPercentage: commissionPercent,
+        complianceFee: values.complianceFee,
+        agentCommissionAmount: values.agentGCI,
+      };
+
+      console.log("Updating transaction with payload:", payload);
+      const response = await apiRequest("PUT", `/api/transactions/${transaction.id}`, payload);
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Failed to update transaction: ${errorText}`);
+      }
+      
+      return await response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Transaction updated",
+        description: "The transaction was successfully updated",
+      });
+      queryClient.invalidateQueries({ queryKey: ['/api/transactions'] });
+      navigate("/simple-transactions");
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error updating transaction",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
 
   // Update total GCI when inputs change
   useEffect(() => {
@@ -140,7 +190,11 @@ export default function SimpleTransactionForm({ transaction }: SimpleTransaction
 
   // Form submission handler
   const onSubmit = (values: TransactionFormValues) => {
-    createTransactionMutation.mutate(values);
+    if (isEditing) {
+      updateTransactionMutation.mutate(values);
+    } else {
+      createTransactionMutation.mutate(values);
+    }
   };
 
   return (
@@ -303,9 +357,12 @@ export default function SimpleTransactionForm({ transaction }: SimpleTransaction
           <Button 
             type="submit" 
             className="w-full"
-            disabled={createTransactionMutation.isPending}
+            disabled={createTransactionMutation.isPending || updateTransactionMutation.isPending}
           >
-            {createTransactionMutation.isPending ? "Creating..." : "Create Transaction"}
+            {isEditing 
+              ? (updateTransactionMutation.isPending ? "Updating..." : "Update Transaction")
+              : (createTransactionMutation.isPending ? "Creating..." : "Create Transaction")
+            }
           </Button>
         </form>
       </CardContent>
