@@ -42,10 +42,17 @@ const transactionFormSchema = z.object({
 
 type TransactionFormValues = z.infer<typeof transactionFormSchema>;
 
-export default function SimpleTransactionForm() {
+interface SimpleTransactionFormProps {
+  transaction?: any;
+}
+
+export default function SimpleTransactionForm({ transaction }: SimpleTransactionFormProps) {
   const { toast } = useToast();
   const [, navigate] = useLocation();
-  const [date, setDate] = useState<Date | undefined>(new Date());
+  const isEditing = !!transaction;
+  const [date, setDate] = useState<Date | undefined>(
+    transaction?.transactionDate ? new Date(transaction.transactionDate) : new Date()
+  );
   const [totalGCI, setTotalGCI] = useState<number>(0);
 
   // Fetch agents for dropdown
@@ -57,13 +64,24 @@ export default function SimpleTransactionForm() {
   const form = useForm<TransactionFormValues>({
     resolver: zodResolver(transactionFormSchema),
     defaultValues: {
-      saleAmount: 0,
-      companyGCI: 0,
-      agentGCI: 0,
-      complianceFee: 0,
-      transactionDate: new Date(),
+      agentId: transaction?.agentId || undefined,
+      propertyAddress: transaction?.propertyAddress || "",
+      saleAmount: transaction?.saleAmount || 0,
+      companyGCI: transaction?.companyGCI || 0,
+      agentGCI: transaction?.agentCommissionAmount || 0,
+      complianceFee: transaction?.complianceFee || 0,
+      transactionDate: transaction?.transactionDate ? new Date(transaction.transactionDate) : new Date(),
     },
   });
+  
+  // Initialize total GCI from transaction if available
+  useEffect(() => {
+    if (transaction) {
+      const agentGCI = transaction.agentCommissionAmount || 0;
+      const companyGCI = transaction.companyGCI || 0;
+      setTotalGCI(agentGCI + companyGCI);
+    }
+  }, [transaction]);
 
   // Create transaction mutation
   const createTransactionMutation = useMutation({
@@ -128,7 +146,7 @@ export default function SimpleTransactionForm() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Create New Transaction</CardTitle>
+        <CardTitle>{isEditing ? "Edit Transaction" : "Create New Transaction"}</CardTitle>
       </CardHeader>
       <CardContent>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">

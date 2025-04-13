@@ -8,8 +8,14 @@ import SimpleTransactionForm from "@/components/forms/SimpleTransactionForm";
 export default function SimpleTransactionPage() {
   const [location] = useLocation();
   const isNewTransaction = location === "/simple-transaction/new";
-  const transactionId = !isNewTransaction ? 
-    parseInt(location.split("/")[2], 10) : null;
+  // Fix path split to properly handle the format /simple-transactions/123
+  const pathParts = location.split("/");
+  const transactionId = !isNewTransaction && pathParts.length > 2 ? 
+    parseInt(pathParts[pathParts.length - 1], 10) : null;
+    
+  console.log("Transaction page location:", location);
+  console.log("Is new transaction:", isNewTransaction);
+  console.log("Transaction ID:", transactionId);
 
   // If editing, fetch the transaction data
   const { data: transaction, isLoading } = useQuery({
@@ -29,7 +35,13 @@ export default function SimpleTransactionPage() {
       </div>
 
       <div className="grid gap-6">
-        <SimpleTransactionForm />
+        {isLoading ? (
+          <div className="flex items-center justify-center p-8">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+          </div>
+        ) : (
+          <SimpleTransactionForm transaction={transaction} />
+        )}
       </div>
     </div>
   );

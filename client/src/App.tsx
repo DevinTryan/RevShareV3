@@ -150,6 +150,13 @@ function AppRoutes() {
           </AppLayout>
         </ProtectedRoute>
       </Route>
+      <Route path="/simple-transactions/:id">
+        <ProtectedRoute>
+          <AppLayout>
+            <SimpleTransactionPage />
+          </AppLayout>
+        </ProtectedRoute>
+      </Route>
       <Route>
         <NotFound />
       </Route>
