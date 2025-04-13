@@ -57,7 +57,7 @@ export const agents = pgTable("agents", {
   capType: text("cap_type").$type<CapType>(),
   currentCap: doublePrecision("current_cap").default(0),
   anniversaryDate: timestamp("anniversary_date").notNull(),
-  sponsorId: integer("sponsor_id").references(() => agents.id),
+  sponsorId: integer("sponsor_id").references((): any => agents.id),
   createdAt: timestamp("created_at").defaultNow(),
   // New fields for commission tracking
   currentTier: integer("current_tier").default(1), // Current tier level for Support agents
@@ -267,7 +267,7 @@ export const insertUserSchema = createInsertSchema(users)
     }),
     email: z.string().email({ message: "Invalid email address" }),
     // Agent ID is optional for admin users, required for agent users
-    agentId: z.number().optional().refine((val, ctx) => {
+    agentId: z.number().optional().refine((val: number | undefined, ctx: { data?: { role?: UserRole } }) => {
       if (ctx.data?.role === UserRole.AGENT && !val) {
         return false;
       }

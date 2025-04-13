@@ -16,6 +16,11 @@ interface ExtendedTransaction extends Transaction {
     additionalCost: number;
   }>;
 }
+
+// Helper function to handle possibly null fields safely
+const nullToZero = (value: number | null): number => {
+  return value === null ? 0 : value;
+};
 import { Button } from "@/components/ui/button";
 import {
   Form,
@@ -119,7 +124,7 @@ const EditTransactionForm = ({ transaction, onClose }: EditTransactionFormProps)
       companyPercentage: Math.round(initialCompanyPercentage) || 0,
       manualCompanyGCI: false,
       manualCompanyGCIAmount: transaction.companyGCI,
-      additionalAgentCost: transaction.additionalAgentCost || 0,
+      additionalAgentCost: nullToZero(transaction.additionalAgentCost),
       transactionDate: new Date(transaction.transactionDate).toISOString().split('T')[0],
       additionalAgents: transaction.additionalAgents?.map(agent => ({
         agentId: agent.agentId,
@@ -134,16 +139,16 @@ const EditTransactionForm = ({ transaction, onClose }: EditTransactionFormProps)
       escrowOfficer: transaction.escrowOfficer || '',
       referrer: transaction.referrer || '',
       lender: transaction.lender || '',
-      sellerCommissionPercentage: transaction.sellerCommissionPercentage || 0,
-      buyerCommissionPercentage: transaction.buyerCommissionPercentage || 0,
-      complianceFee: transaction.complianceFee || 0,
-      referralPercentage: transaction.referralPercentage || 0,
-      referralFee: transaction.referralFee || 0,
+      sellerCommissionPercentage: nullToZero(transaction.sellerCommissionPercentage),
+      buyerCommissionPercentage: nullToZero(transaction.buyerCommissionPercentage),
+      complianceFee: nullToZero(transaction.complianceFee),
+      referralPercentage: nullToZero(transaction.referralPercentage),
+      referralFee: nullToZero(transaction.referralFee),
       showingAgent: transaction.showingAgent || '',
-      showingAgentFee: transaction.showingAgentFee || 0,
-      teamAgentsIncome: transaction.teamAgentsIncome || 0,
-      personalIncome: transaction.personalIncome || 0,
-      actualCheckAmount: transaction.actualCheckAmount || 0,
+      showingAgentFee: nullToZero(transaction.showingAgentFee),
+      teamAgentsIncome: nullToZero(transaction.teamAgentsIncome),
+      personalIncome: nullToZero(transaction.personalIncome),
+      actualCheckAmount: nullToZero(transaction.actualCheckAmount),
     },
   });
 
