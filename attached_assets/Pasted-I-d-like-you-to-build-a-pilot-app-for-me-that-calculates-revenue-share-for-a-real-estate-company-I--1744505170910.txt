@@ -1,0 +1,105 @@
+I'd like you to build a pilot app for me that calculates revenue share for a real estate company. I'm going to upload a document that explains everything about revenue share. Then I would like you to build a sample calculator that will track who is each persons downline. Meaning, it will know which agent recruited each one, it will calculate how much commission or revenue share is sent to each person. It will do this based on their anniversary year and there will be a way to see it transparently
+
+✅ The pilot revenue share calculator app is now drafted in React. Here’s what it currently does:
+🔧 Core Features:
+* Agent Input Form — Add agents with:
+    * Name
+    * Who recruited them
+    * Revenue share model (Principal or Support)
+    * Company GCI (used to calculate share)
+* Downline Tracking — Up to 5 levels deep
+* Earnings Calculation — Based on the revenue share rules:
+    * Principal: 12.5% of company GCI, max $2,000/year
+    * Support: 2% of company GCI, max $2,000/year
+* Transparent Earnings Display — Shows each agent’s name, model, GCI, and what they’re earning from their downline.
+
+🔜 Next Options
+Let me know what you'd like to do next:
+1. Deploy this as a working prototype (I can give instructions to run it locally or help host it).
+2. Add enhancements — e.g. filters by anniversary year, CSV export, edit/delete agents, user login for teams, or mobile layout.
+3. Design UI mockups or integrate into your existing company portal.
+Would you like to move forward with deployment or make any changes?
+
+
+
+🧠 Functionality Upgrades
+* Edit or delete agents from the list
+* Upload a CSV of agents instead of manual entry
+* Track by anniversary year and reset earnings annually
+* Filter by upline/downline or agent name
+* Add real transaction records (instead of entering total GCI manually)
+
+💎 Visual & Usability Improvements
+* Apply clean styling with Tailwind CSS
+* Use dropdowns + search instead of plain inputs
+* Group agents visually by downline level
+* Show tree-view or graph view of agent network
+* Mobile-friendly layout
+
+🔒 User Management (Optional)
+* Secure it with admin login
+* Let agents log in to see just their downline + earnings
+* Track activity by user
+
+📊 Reporting Features
+* Export downline earnings as CSV or PDF
+* See total revenue share paid by month/year
+* Visualize growth over time
+
+
+Research everything you can on eXp Realty and their revenue share model. We need a very comprehensive system that tells us full data around agents, recruiter and recruitee, payments, dates, transaction addresses, total GCI, agent payout GCI, revenue share GCI. Everything. There should be 4 fields that I enter and everything else is calculated. 1. I need to enter in who is who's sponsor so at at time I can see who is "above" and below each person. 2. I need to enter in an address of a sale and the date of the sale that has occurred. 3. I need to enter in the total commission that the company received for that transaction. So for example if talk realty receives $10,000 then we will pay 12.5% of that to the entire upline. If there is only 1 sponsor then we will only pay 12.5%. If there are 5 levels of sponsorship above then we would pay 60%. 4. I need to enter the plan the agent who closed the transaction is on. For example if Devin is on the principal agent plan or the support plan.
+
+ChatGPT said:
+Absolutely, let's design a comprehensive system tailored to your specifications. Here's how we can structure the application:
+
+🧩 Core Data Inputs
+You'll need to provide:
+1. Sponsorship Hierarchy: Define each agent's sponsor to establish the upline and downline relationships. 
+2. Transaction Details:
+    * Property Address: The location of the sale. 
+    * Sale Date: When the transaction occurred. 
+3. Financial Information:
+    * Total Company Commission (GCI): The gross commission income received by the company for the transaction. sa.exprealty.com+10SmartAgentAlliance+10eXp One Great Force+10
+4. Agent Plan:
+    * Specify whether the closing agent is on the Principal or Support plan. 
+
+🔍 Automated Calculations
+Based on the inputs, the system will compute:
+* Agent Commission Split: Typically, agents receive 80% of the GCI until they reach a cap (e.g., $16,000), after which they receive 100% . Five Pillars Nation+5LinkedIn+5Reddit+5
+* Company Retained Commission: The portion of GCI retained by the company after the agent's share. 
+* Revenue Share Distribution:
+    * A percentage of the company's retained commission is distributed to the upline, based on the number of levels and the agent's plan. 
+    * For example, if there's only one sponsor, they might receive 12.5%. With more levels, the distribution adjusts accordingly. Global MLM Software+1Building Better Agents+1
+* Revenue Share Allocation: Breakdown of revenue share amounts to each upline member, considering their level and eligibility. 
+
+🗂️ Data Structure
+To support these functionalities, the system will maintain:
+* Agent Profiles:
+    * Name 
+    * Sponsor Kyle Handy+6eXp Life, by eXp Realty+6WSJ+6
+    * Plan Type (Principal/Support) 
+    * Anniversary Date Agent Wealth Hustle+13Reddit+13sa.exprealty.com+13
+    * Capping Status MarketWatch+20LinkedIn+20Five Pillars Nation+20
+* Transaction Records:
+    * Property Address sa.exprealty.com+4Five Pillars Nation+4Kyle Handy+4
+    * Sale Date eXp Realty+2EXP Knowledge Base+2SmartAgentAlliance+2
+    * Total GCI 
+    * Closing Agent 
+* Revenue Share Logs:
+    * Transaction ID Building Better Agents+13Five Pillars Nation+13eXp One Great Force+13
+    * Upline Members Barron's
+    * Revenue Share Amounts 
+    * Distribution Dates 
+
+📊 Reporting & Transparency
+The system will offer:
+* Agent Dashboards: View personal transactions, earnings, and downline performance. 
+* Upline/Downline Visualization: Graphical representation of sponsorship hierarchies. 
+* Revenue Share Statements: Detailed breakdowns of revenue share earnings per transaction and over time. 
+* Transaction Histories: Comprehensive logs of all transactions with associated financials. 
+
+🛠️ Next Steps
+To proceed, we'll need to:
+1. Define Specific Rules: Clarify the exact percentages and conditions for revenue share distributions based on the number of upline levels and agent plans. 
+2. Design the Database Schema: Establish the structure for storing agents, transactions, and revenue share data. 
+3. Develop the Application: Build the user interface and backend logic to handle data input, processing, and reporting.
