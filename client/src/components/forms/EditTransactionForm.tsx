@@ -376,28 +376,41 @@ const EditTransactionForm = ({ transaction, onClose }: EditTransactionFormProps)
     console.log("Current form values:", form.getValues());
     console.log("Form state:", form.formState);
     
-    if (Object.keys(form.formState.errors).length > 0) {
-      console.error("Form has validation errors:", form.formState.errors);
-      toast({
-        title: "Validation Error",
-        description: "Please check the form for errors",
-        variant: "destructive",
-      });
-      return;
+    // Fix validation errors by providing default values for required fields
+    const values = form.getValues();
+    
+    // Fix company percentage if null or undefined
+    if (values.companyPercentage === null || values.companyPercentage === undefined) {
+      console.log("Fixing missing companyPercentage with default 15%");
+      form.setValue("companyPercentage", 15);
     }
     
-    try {
-      console.log("Manually triggering form submission");
-      const values = form.getValues();
-      updateTransactionMutation.mutate(values);
-    } catch (err) {
-      console.error("Error in direct submit:", err);
-      toast({
-        title: "Error",
-        description: "An unexpected error occurred",
-        variant: "destructive",
-      });
-    }
+    // Check for any remaining validation errors
+    form.trigger().then(isValid => {
+      if (!isValid) {
+        console.error("Form still has validation errors:", form.formState.errors);
+        toast({
+          title: "Validation Error",
+          description: "Please check the form for errors",
+          variant: "destructive",
+        });
+        return;
+      }
+      
+      try {
+        console.log("Manually triggering form submission with fixed values");
+        const updatedValues = form.getValues();
+        console.log("Updated form values:", updatedValues);
+        updateTransactionMutation.mutate(updatedValues);
+      } catch (err) {
+        console.error("Error in direct submit:", err);
+        toast({
+          title: "Error",
+          description: "An unexpected error occurred",
+          variant: "destructive",
+        });
+      }
+    });
   };
 
   return (
@@ -1040,17 +1053,18 @@ const EditTransactionForm = ({ transaction, onClose }: EditTransactionFormProps)
                 <div className="flex justify-between pt-4">
                   <Button
                     type="button"
-                    variant="outline"
+                    variant="ghost"
                     onClick={() => setActiveTab("basic")}
                   >
-                    Back
+                    ← Basic Info
                   </Button>
                   
                   <Button
                     type="button" 
+                    variant="ghost"
                     onClick={() => setActiveTab("additional")}
                   >
-                    Next: Additional Info
+                    Additional Info →
                   </Button>
                 </div>
               </TabsContent>
@@ -1165,66 +1179,14 @@ const EditTransactionForm = ({ transaction, onClose }: EditTransactionFormProps)
                   />
                 </div>
                 
-                <div className="flex justify-between pt-4">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => setActiveTab("commission")}
-                  >
-                    Back
-                  </Button>
-                  
-                  <div className="flex space-x-2">
-                    <Button
-                      type="button"
-                      variant="destructive"
-                      onClick={handleDelete}
-                      disabled={updateTransactionMutation.isPending || deleteTransactionMutation.isPending}
-                    >
-                      {deleteTransactionMutation.isPending ? "Deleting..." : "Delete Transaction"}
-                    </Button>
-                    
-                    <Button
-                      type="submit"
-                      disabled={updateTransactionMutation.isPending}
-                    >
-                      {updateTransactionMutation.isPending ? "Saving..." : "Save Changes"}
-                    </Button>
-                  </div>
-                </div>
+                {/* Navigation buttons removed - now using global buttons at bottom */}
               </TabsContent>
               
               {/* Revenue Share Breakdown */}
               <TabsContent value="revenue-share" className="py-4">
                 <RevenueShareBreakdown transaction={transaction} />
                 
-                <div className="flex justify-between mt-4">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => setActiveTab("additional")}
-                  >
-                    Back
-                  </Button>
-                  
-                  <div className="flex space-x-2">
-                    <Button
-                      type="button"
-                      variant="destructive"
-                      onClick={handleDelete}
-                      disabled={updateTransactionMutation.isPending || deleteTransactionMutation.isPending}
-                    >
-                      {deleteTransactionMutation.isPending ? "Deleting..." : "Delete Transaction"}
-                    </Button>
-                    
-                    <Button
-                      type="submit"
-                      disabled={updateTransactionMutation.isPending}
-                    >
-                      {updateTransactionMutation.isPending ? "Saving..." : "Save Changes"}
-                    </Button>
-                  </div>
-                </div>
+                {/* Navigation buttons removed - now using global buttons at bottom */}
               </TabsContent>
             </Tabs>
             
