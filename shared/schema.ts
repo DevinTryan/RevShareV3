@@ -128,6 +128,9 @@ export const transactions = pgTable("transactions", {
   additionalAgentId: integer("additional_agent_id").references(() => agents.id), // additional agent involved
   additionalAgentFee: doublePrecision("additional_agent_fee").default(0), // fee for additional agent
   additionalAgentPercentage: doublePrecision("additional_agent_percentage").default(0), // % for additional agent
+  
+  // Archived fields for deleted agents
+  agentNameArchived: text("agent_name_archived"), // Keeps agent name after deletion
 });
 
 // Revenue share table definition
