@@ -577,12 +577,13 @@ const EditTransactionForm = ({ transaction, onClose }: EditTransactionFormProps)
                   />
                 </div>
 
-                <div className="flex justify-end space-x-2 pt-4">
+                <div className="flex justify-end pt-4">
                   <Button
                     type="button" 
+                    variant="ghost"
                     onClick={() => setActiveTab("commission")}
                   >
-                    Next: Commission Details
+                    Commission Details →
                   </Button>
                 </div>
               </TabsContent>
