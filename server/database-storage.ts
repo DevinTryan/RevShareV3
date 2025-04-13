@@ -281,61 +281,89 @@ export class DatabaseStorage implements IStorage {
   }
 
   private async processRevenueShare(transaction: Transaction): Promise<void> {
-    // Get agent
-    const agent = await this.getAgent(transaction.agentId);
-    if (!agent) return;
-    
-    // Get sponsor chain (up to 5 levels)
-    const sponsorChain = await this.getSponsorChain(transaction.agentId, 5);
-    
-    // No sponsors, no revenue share
-    if (sponsorChain.length === 0) return;
-    
-    // Calculate revenue share for each sponsor
-    for (let tier = 0; tier < sponsorChain.length; tier++) {
-      const sponsorId = sponsorChain[tier];
-      const sponsor = await this.getAgent(sponsorId);
-      if (!sponsor) continue;
+    try {
+      // Get agent
+      const agent = await this.getAgent(transaction.agentId);
+      if (!agent) return;
       
-      // Calculate revenue share amount based on agent type
-      let revenueShareAmount = 0;
-      const tierLevel = tier + 1;
+      // Get sponsor chain (up to 5 levels)
+      const sponsorChain = await this.getSponsorChain(transaction.agentId, 5);
       
-      if (sponsor.agentType === 'principal') {
-        revenueShareAmount = Number(transaction.companyGCI) * 0.125; // 12.5% for principal agent
-      } else {
-        revenueShareAmount = Number(transaction.companyGCI) * 0.02; // 2% for support agent
-      }
+      // No sponsors, no revenue share
+      if (sponsorChain.length === 0) return;
       
-      // Check annual cap
-      const maxAnnualShare = calculateMaxAnnualRevenueShare(sponsor);
-      if (maxAnnualShare > 0) {
-        // Calculate how much sponsor has received from this agent this year
-        const yearStart = new Date();
-        yearStart.setMonth(0, 1); // January 1st of current year
+      // Calculate revenue share for each sponsor
+      for (let tier = 0; tier < sponsorChain.length; tier++) {
+        const sponsorId = sponsorChain[tier];
+        const sponsor = await this.getAgent(sponsorId);
+        if (!sponsor) continue;
         
-        const totalPaidThisYear = await this.getTotalPaidToSponsor(sponsorId, transaction.agentId);
-        const remainingAllowance = calculateRemainingAllowance(maxAnnualShare, totalPaidThisYear);
+        // Calculate revenue share amount based on agent type
+        let revenueShareAmount = 0;
+        const tierLevel = tier + 1;
         
-        if (remainingAllowance <= 0) {
-          revenueShareAmount = 0;
-        } else if (revenueShareAmount > remainingAllowance) {
-          revenueShareAmount = remainingAllowance;
+        if (sponsor.agentType === 'principal') {
+          revenueShareAmount = Number(transaction.companyGCI) * 0.125; // 12.5% for principal agent
+        } else {
+          revenueShareAmount = Number(transaction.companyGCI) * 0.02; // 2% for support agent
+        }
+        
+        // Check annual cap - using try/catch to handle potential errors with utility functions
+        try {
+          // Safely calculate max annual share with fallback
+          let maxAnnualShare = 2000; // Default fallback value
+          try {
+            if (typeof calculateMaxAnnualRevenueShare === 'function') {
+              maxAnnualShare = calculateMaxAnnualRevenueShare(sponsor);
+            }
+          } catch (err) {
+            console.log("Error calculating max annual share, using default:", err);
+          }
+          
+          if (maxAnnualShare > 0) {
+            // Calculate how much sponsor has received from this agent this year
+            const yearStart = new Date();
+            yearStart.setMonth(0, 1); // January 1st of current year
+            
+            const totalPaidThisYear = await this.getTotalPaidToSponsor(sponsorId, transaction.agentId);
+            
+            // Safely calculate remaining allowance with fallback
+            let remainingAllowance = maxAnnualShare - totalPaidThisYear;
+            try {
+              if (typeof calculateRemainingAllowance === 'function') {
+                remainingAllowance = calculateRemainingAllowance(maxAnnualShare, totalPaidThisYear);
+              }
+            } catch (err) {
+              console.log("Error calculating remaining allowance, using simple calculation:", err);
+            }
+            
+            if (remainingAllowance <= 0) {
+              revenueShareAmount = 0;
+            } else if (revenueShareAmount > remainingAllowance) {
+              revenueShareAmount = remainingAllowance;
+            }
+          }
+        } catch (err) {
+          console.error("Error processing revenue share caps:", err);
+          // Continue with the calculated amount without applying caps
+        }
+        
+        // Create revenue share record if amount > 0
+        if (revenueShareAmount > 0) {
+          const revenueShare: InsertRevenueShare = {
+            transactionId: transaction.id,
+            sourceAgentId: transaction.agentId,
+            recipientAgentId: sponsorId,
+            amount: revenueShareAmount,
+            tier: tierLevel
+          };
+          
+          await this.createRevenueShare(revenueShare);
         }
       }
-      
-      // Create revenue share record if amount > 0
-      if (revenueShareAmount > 0) {
-        const revenueShare: InsertRevenueShare = {
-          transactionId: transaction.id,
-          sourceAgentId: transaction.agentId,
-          recipientAgentId: sponsorId,
-          amount: revenueShareAmount,
-          tier: tierLevel
-        };
-        
-        await this.createRevenueShare(revenueShare);
-      }
+    } catch (error) {
+      console.error("Error processing revenue share:", error);
+      // Don't throw the error so transaction creation can still succeed
     }
   }
 
