@@ -153,14 +153,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/transactions", async (req: Request, res: Response) => {
     try {
-      const transactionData = insertTransactionSchema.parse(req.body);
+      console.log("Transaction data received:", JSON.stringify(req.body));
+      
+      // Calculate companyGCI if not provided
+      const data = req.body;
+      if (!data.companyGCI && data.saleAmount && data.commissionPercentage) {
+        const commission = (data.saleAmount * data.commissionPercentage) / 100;
+        data.companyGCI = commission * 0.15; // 15% of commission is company GCI
+      }
+      
+      const transactionData = insertTransactionSchema.parse(data);
+      console.log("Parsed transaction data:", JSON.stringify(transactionData));
+      
       const transaction = await storage.createTransaction(transactionData);
       res.status(201).json(transaction);
     } catch (error) {
+      console.error("Transaction creation error:", error);
+      
       if (error instanceof ZodError) {
         const validationError = fromZodError(error);
         return res.status(400).json({ message: validationError.message });
       }
+      
       res.status(500).json({ message: "Failed to create transaction" });
     }
   });

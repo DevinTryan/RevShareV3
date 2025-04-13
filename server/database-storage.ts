@@ -174,14 +174,29 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createTransaction(insertTransaction: InsertTransaction): Promise<Transaction> {
-    // Start a transaction
-    const result = await db.insert(transactions).values(insertTransaction).returning();
-    const transaction = result[0];
-    
-    // Process revenue shares for this transaction
-    await this.processRevenueShare(transaction);
-    
-    return transaction;
+    try {
+      console.log("Creating transaction:", JSON.stringify(insertTransaction));
+      
+      // Make sure we have a valid date object
+      const transactionToInsert = {
+        ...insertTransaction,
+        transactionDate: new Date(insertTransaction.transactionDate)
+      };
+      
+      // Insert into database
+      const result = await db.insert(transactions).values(transactionToInsert).returning();
+      const transaction = result[0];
+      
+      console.log("Transaction created successfully:", JSON.stringify(transaction));
+      
+      // Process revenue shares for this transaction
+      await this.processRevenueShare(transaction);
+      
+      return transaction;
+    } catch (error) {
+      console.error("Error creating transaction:", error);
+      throw error;
+    }
   }
 
   async getAgentTransactions(agentId: number): Promise<Transaction[]> {

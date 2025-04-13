@@ -60,11 +60,12 @@ export const insertAgentSchema = createInsertSchema(agents)
   });
 
 export const insertTransactionSchema = createInsertSchema(transactions)
-  .omit({ id: true, createdAt: true, companyGCI: true })
+  .omit({ id: true, createdAt: true })
   .extend({
     transactionDate: z.coerce.date(),
     saleAmount: z.number().positive(),
-    commissionPercentage: z.number().positive()
+    commissionPercentage: z.number().positive(),
+    companyGCI: z.number().positive()
   });
 
 export const insertRevenueShareSchema = createInsertSchema(revenueShares)
