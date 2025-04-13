@@ -12,6 +12,7 @@ import ZapierSettingsPage from "@/pages/ZapierSettingsPage";
 import AuthPage from "@/pages/auth-page";
 import UnauthorizedPage from "@/pages/unauthorized-page";
 import NotFound from "@/pages/not-found";
+import UsersPage from "@/pages/admin/UsersPage";
 import Sidebar from "@/components/layout/Sidebar";
 import MobileHeader from "@/components/layout/MobileHeader";
 import { useState } from "react";

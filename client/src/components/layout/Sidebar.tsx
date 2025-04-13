@@ -1,5 +1,8 @@
 import { Link, useLocation } from "wouter";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/hooks/use-auth";
+import { useState } from "react";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 
 interface SidebarProps {
   isOpen: boolean;
@@ -7,7 +10,8 @@ interface SidebarProps {
 }
 
 const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
-  const [location] = useLocation();
+  const [location, navigate] = useLocation();
+  const { user, logoutMutation } = useAuth();
 
   const navItems = [
     { path: "/", label: "Dashboard", icon: "ri-dashboard-line" },
@@ -67,14 +71,43 @@ const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
         </div>
         
         <div className="p-4 border-t border-gray-200">
-          <div className="flex items-center">
-            <div className="h-8 w-8 rounded-full bg-primary-600 flex items-center justify-center text-white font-semibold">
-              A
+          <div className="flex items-center justify-between">
+            <div className="flex items-center">
+              <div className="h-8 w-8 rounded-full bg-primary-600 flex items-center justify-center text-white font-semibold">
+                {user?.username?.charAt(0).toUpperCase() || 'U'}
+              </div>
+              <div className="ml-3">
+                <p className="text-sm font-medium">{user?.username || 'User'}</p>
+                <p className="text-xs text-gray-500">{user?.email || 'user@company.com'}</p>
+              </div>
             </div>
-            <div className="ml-3">
-              <p className="text-sm font-medium">Admin User</p>
-              <p className="text-xs text-gray-500">admin@company.com</p>
-            </div>
+            
+            <DropdownMenu>
+              <DropdownMenuTrigger className="focus:outline-none">
+                <div className="p-1.5 rounded-full hover:bg-gray-100 cursor-pointer">
+                  <i className="ri-more-2-fill text-gray-500"></i>
+                </div>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                {user?.role === 'admin' && (
+                  <DropdownMenuItem onClick={() => navigate('/admin/users')}>
+                    <i className="ri-user-settings-line mr-2"></i> Manage Users
+                  </DropdownMenuItem>
+                )}
+                <DropdownMenuItem onClick={() => navigate('/profile')}>
+                  <i className="ri-user-3-line mr-2"></i> My Profile
+                </DropdownMenuItem>
+                <DropdownMenuItem 
+                  className="text-red-600 focus:text-red-600" 
+                  onClick={() => {
+                    logoutMutation.mutate();
+                    navigate('/auth');
+                  }}
+                >
+                  <i className="ri-logout-box-line mr-2"></i> Sign Out
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
       </div>
