@@ -4,17 +4,16 @@ import { Express, Request, Response, NextFunction } from "express";
 import session from "express-session";
 import { scrypt, randomBytes, timingSafeEqual } from "crypto";
 import { promisify } from "util";
-import MemoryStore from "memorystore";
-import { db } from "./db";
 import { storage } from "./storage";
-import { User, UserRole } from "@shared/schema";
-import { eq } from "drizzle-orm";
-import { users } from "@shared/schema";
+import { User, UserRole } from "../shared/schema";
+import { z } from 'zod';
 
-// Create memory store for session storage
-const MemStore = MemoryStore(session);
+declare global {
+  namespace Express {
+    interface User extends User {}
+  }
+}
 
-// Promisify the scrypt function
 const scryptAsync = promisify(scrypt);
 
 /**
@@ -36,57 +35,52 @@ export async function comparePasswords(supplied: string, stored: string): Promis
   return timingSafeEqual(hashedBuf, suppliedBuf);
 }
 
+// Login validation schema
+export const loginSchema = z.object({
+  username: z.string().min(1, "Username is required"),
+  password: z.string().min(1, "Password is required")
+});
+
 /**
  * Setup authentication middleware and routes
  */
 export function setupAuth(app: Express) {
-  // Session configuration
-  const sessionStore = new MemStore({
-    checkPeriod: 86400000 // prune expired entries every 24h
-  });
+  // Configure session
+  const sessionSettings: session.SessionOptions = {
+    secret: process.env.SESSION_SECRET || "talk-realty-session-secret",
+    resave: false,
+    saveUninitialized: false,
+    store: storage.sessionStore,
+    cookie: {
+      maxAge: 1000 * 60 * 60 * 24, // 1 day
+      secure: process.env.NODE_ENV === "production"
+    }
+  };
 
-  app.use(
-    session({
-      secret: process.env.SESSION_SECRET || "talk-realty-session-secret",
-      resave: false,
-      saveUninitialized: false,
-      store: sessionStore,
-      cookie: {
-        secure: process.env.NODE_ENV === "production",
-        maxAge: 1000 * 60 * 60 * 24 // 24 hours
-      }
-    })
-  );
-
-  // Initialize Passport
+  app.set("trust proxy", 1);
+  app.use(session(sessionSettings));
   app.use(passport.initialize());
   app.use(passport.session());
 
-  // Configure local strategy for username/password auth
+  // Configure Local Strategy
   passport.use(
     new LocalStrategy(async (username, password, done) => {
       try {
-        // Find user by username
-        const [user] = await db.select().from(users).where(eq(users.username, username));
+        const user = await storage.getUserByUsername(username);
         
         if (!user) {
-          return done(null, false, { message: "Incorrect username" });
+          return done(null, false, { message: "Invalid username or password" });
         }
         
-        // Check password
-        const isPasswordValid = await comparePasswords(password, user.password);
-        
-        if (!isPasswordValid) {
-          return done(null, false, { message: "Incorrect password" });
+        if (!(await comparePasswords(password, user.password))) {
+          return done(null, false, { message: "Invalid username or password" });
         }
         
-        // If auth successful, update last login time
-        await db
-          .update(users)
-          .set({ lastLogin: new Date() })
-          .where(eq(users.id, user.id));
+        // Update last login time
+        await storage.updateUser(user.id, { 
+          lastLogin: new Date() 
+        });
         
-        // Return user
         return done(null, user);
       } catch (error) {
         return done(error);
@@ -94,240 +88,165 @@ export function setupAuth(app: Express) {
     })
   );
 
-  // User serialization and deserialization for session
+  // Serialization
   passport.serializeUser((user: User, done) => {
     done(null, user.id);
   });
 
   passport.deserializeUser(async (id: number, done) => {
     try {
-      const [user] = await db.select().from(users).where(eq(users.id, id));
-      
-      if (!user) {
-        return done(null, false);
-      }
-      
-      // If user is an agent, include agent data
-      if (user.role === UserRole.AGENT && user.agentId) {
-        const agent = await storage.getAgentWithDownline(user.agentId);
-        user.agent = agent;
-      }
-      
+      const user = await storage.getUser(id);
       done(null, user);
     } catch (error) {
-      done(error);
+      done(error, null);
     }
   });
 
-  // Auth routes
-  
-  // Register a new user
+  // Registration endpoint
   app.post("/api/auth/register", async (req: Request, res: Response) => {
     try {
-      const { username, password, email, role, agentId } = req.body;
-      
-      // Check if username is already taken
-      const [existingUser] = await db
-        .select()
-        .from(users)
-        .where(eq(users.username, username));
-      
+      // Check if user exists
+      const existingUser = await storage.getUserByUsername(req.body.username);
       if (existingUser) {
-        return res.status(400).json({ message: "Username is already taken" });
+        return res.status(400).json({ message: "Username already exists" });
       }
-      
-      // Check if agent exists if agentId is provided
-      if (agentId) {
-        const agent = await storage.getAgent(agentId);
+
+      // Check if email exists
+      const existingEmail = await storage.getUserByEmail(req.body.email);
+      if (existingEmail) {
+        return res.status(400).json({ message: "Email already exists" });
+      }
+
+      // If agentId is provided, ensure it's valid and not already linked
+      if (req.body.agentId) {
+        const agent = await storage.getAgent(req.body.agentId);
         if (!agent) {
-          return res.status(400).json({ message: "Agent not found" });
+          return res.status(400).json({ message: "Invalid agent ID" });
+        }
+
+        // Check if any user already has this agent ID linked
+        const existingAgentUser = await storage.getAgentUser(req.body.agentId);
+        if (existingAgentUser) {
+          return res.status(400).json({ message: "This agent is already linked to a user account" });
         }
       }
-      
-      // Hash password
-      const hashedPassword = await hashPassword(password);
-      
-      // Create new user
-      const [user] = await db
-        .insert(users)
-        .values({
-          username,
-          password: hashedPassword,
-          email,
-          role,
-          agentId: agentId || null,
-          createdAt: new Date()
-        })
-        .returning();
-      
-      // Remove password from response
-      const { password: _, ...userWithoutPassword } = user;
-      
-      res.status(201).json(userWithoutPassword);
+
+      // Hash the password
+      const hashedPassword = await hashPassword(req.body.password);
+
+      // Create the user
+      const user = await storage.createUser({
+        ...req.body,
+        password: hashedPassword,
+        createdAt: new Date(),
+        lastLogin: null,
+        resetToken: null,
+        resetTokenExpiry: null
+      });
+
+      // Log the user in
+      req.login(user, (err) => {
+        if (err) {
+          return res.status(500).json({ message: "Error during login after registration" });
+        }
+        return res.status(201).json(user);
+      });
     } catch (error) {
       console.error("Registration error:", error);
-      res.status(500).json({ message: "Registration failed" });
+      res.status(500).json({ message: "Error creating user" });
     }
   });
 
-  // Login
+  // Login endpoint
   app.post("/api/auth/login", (req: Request, res: Response, next: NextFunction) => {
+    // Validate login data
+    const result = loginSchema.safeParse(req.body);
+    if (!result.success) {
+      return res.status(400).json({ message: "Invalid login data", errors: result.error.errors });
+    }
+
     passport.authenticate("local", (err, user, info) => {
       if (err) {
-        return next(err);
+        return res.status(500).json({ message: "Internal server error" });
       }
-      
       if (!user) {
-        return res.status(401).json({ message: info?.message || "Authentication failed" });
+        return res.status(401).json({ message: info?.message || "Invalid credentials" });
       }
-      
-      req.login(user, async (loginErr) => {
-        if (loginErr) {
-          return next(loginErr);
+      req.login(user, (err) => {
+        if (err) {
+          return res.status(500).json({ message: "Error during login" });
         }
-        
-        // If user is an agent, include agent data
-        if (user.role === UserRole.AGENT && user.agentId) {
-          const agent = await storage.getAgentWithDownline(user.agentId);
-          user.agent = agent;
-        }
-        
-        // Remove password from response
-        const { password, ...userWithoutPassword } = user;
-        
-        return res.json(userWithoutPassword);
+        return res.status(200).json(user);
       });
     })(req, res, next);
   });
 
-  // Logout
+  // Logout endpoint
   app.post("/api/auth/logout", (req: Request, res: Response) => {
     req.logout((err) => {
       if (err) {
-        return res.status(500).json({ message: "Logout failed" });
+        return res.status(500).json({ message: "Error during logout" });
       }
-      
       res.status(200).json({ message: "Logged out successfully" });
     });
   });
 
-  // Get current user
+  // Current user endpoint
   app.get("/api/auth/user", (req: Request, res: Response) => {
     if (!req.isAuthenticated()) {
       return res.status(401).json({ message: "Not authenticated" });
     }
-    
-    // Remove password from response
-    const { password, ...userWithoutPassword } = req.user as User;
-    
-    res.json(userWithoutPassword);
+    res.status(200).json(req.user);
   });
 
-  // Password reset request
-  app.post("/api/auth/reset-password-request", async (req: Request, res: Response) => {
-    try {
-      const { email } = req.body;
-      
-      // Find user by email
-      const [user] = await db.select().from(users).where(eq(users.email, email));
-      
-      if (!user) {
-        // Don't reveal that email doesn't exist for security reasons
-        return res.status(200).json({ message: "If your email is registered, you will receive a reset link" });
-      }
-      
-      // Generate reset token
-      const resetToken = randomBytes(32).toString("hex");
-      const resetTokenExpiry = new Date(Date.now() + 3600000); // 1 hour from now
-      
-      // Store token in database
-      await db
-        .update(users)
-        .set({ resetToken, resetTokenExpiry })
-        .where(eq(users.id, user.id));
-      
-      // In a real application, you would send an email with the reset link
-      // For this demo, we'll just return the token
-      res.status(200).json({
-        message: "If your email is registered, you will receive a reset link",
-        // Only include token in development mode
-        ...(process.env.NODE_ENV !== "production" && { resetToken })
-      });
-    } catch (error) {
-      console.error("Password reset request error:", error);
-      res.status(500).json({ message: "Password reset request failed" });
+  // Authentication middleware for protected routes
+  const requireAuth = (req: Request, res: Response, next: NextFunction) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ message: "Authentication required" });
     }
-  });
+    next();
+  };
 
-  // Reset password with token
-  app.post("/api/auth/reset-password", async (req: Request, res: Response) => {
-    try {
-      const { token, newPassword } = req.body;
-      
-      if (!token || !newPassword) {
-        return res.status(400).json({ message: "Token and new password are required" });
-      }
-      
-      // Find user by token
-      const [user] = await db
-        .select()
-        .from(users)
-        .where(eq(users.resetToken, token));
-      
-      if (!user || !user.resetTokenExpiry) {
-        return res.status(400).json({ message: "Invalid or expired token" });
-      }
-      
-      // Check if token is expired
-      if (new Date() > new Date(user.resetTokenExpiry)) {
-        return res.status(400).json({ message: "Token has expired" });
-      }
-      
-      // Hash new password
-      const hashedPassword = await hashPassword(newPassword);
-      
-      // Update user with new password and clear token
-      await db
-        .update(users)
-        .set({
-          password: hashedPassword,
-          resetToken: null,
-          resetTokenExpiry: null
-        })
-        .where(eq(users.id, user.id));
-      
-      res.status(200).json({ message: "Password has been reset successfully" });
-    } catch (error) {
-      console.error("Password reset error:", error);
-      res.status(500).json({ message: "Password reset failed" });
-    }
-  });
-  
-  // Middleware for checking if user is authenticated
-  app.use("/api/protected", (req: Request, res: Response, next: NextFunction) => {
+  // Admin middleware for admin-only routes
+  const requireAdmin = (req: Request, res: Response, next: NextFunction) => {
     if (!req.isAuthenticated()) {
-      return res.status(401).json({ message: "Not authenticated" });
+      return res.status(401).json({ message: "Authentication required" });
     }
-    
+    if (req.user?.role !== UserRole.ADMIN) {
+      return res.status(403).json({ message: "Admin access required" });
+    }
     next();
-  });
-  
-  // Middleware for checking if user is admin
-  app.use("/api/admin", (req: Request, res: Response, next: NextFunction) => {
+  };
+
+  // Agent-specific middleware
+  const requireAgentAccess = (req: Request, res: Response, next: NextFunction) => {
     if (!req.isAuthenticated()) {
-      return res.status(401).json({ message: "Not authenticated" });
+      return res.status(401).json({ message: "Authentication required" });
     }
     
-    const user = req.user as User;
+    const agentId = parseInt(req.params.id);
     
-    if (user.role !== UserRole.ADMIN) {
-      return res.status(403).json({ message: "Not authorized" });
+    // Admin has access to all agents
+    if (req.user?.role === UserRole.ADMIN) {
+      return next();
     }
     
-    next();
-  });
+    // Agents can only access their own linked agent
+    if (req.user?.role === UserRole.AGENT && req.user?.agentId === agentId) {
+      return next();
+    }
+    
+    return res.status(403).json({ message: "You don't have access to this agent's data" });
+  };
+
+  // Apply middleware to routes
+  app.use("/api/protected", requireAuth);
+  app.use("/api/admin", requireAdmin);
   
+  // Return middleware for use in route definitions
   return {
-    sessionStore
+    requireAuth,
+    requireAdmin,
+    requireAgentAccess
   };
 }

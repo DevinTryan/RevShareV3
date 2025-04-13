@@ -25,10 +25,10 @@ import {
 import { setupAuth } from "./auth";
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // Set up authentication
-  setupAuth(app);
+  // Set up authentication and get middleware
+  const { requireAuth, requireAdmin, requireAgentAccess } = setupAuth(app);
   // API Routes for Agents
-  app.get("/api/agents", async (req: Request, res: Response) => {
+  app.get("/api/agents", requireAuth, async (req: Request, res: Response) => {
     try {
       const agents = await storage.getAgents();
       res.json(agents);
@@ -37,7 +37,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/agents/downline", async (req: Request, res: Response) => {
+  app.get("/api/agents/downline", requireAuth, async (req: Request, res: Response) => {
     try {
       const agents = await storage.getAgentsWithDownline();
       res.json(agents);

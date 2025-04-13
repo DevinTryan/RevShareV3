@@ -20,6 +20,17 @@ import {
  * Implementation of the storage interface using PostgreSQL database
  */
 export class DatabaseStorage implements IStorage {
+  public sessionStore: session.Store;
+  
+  constructor() {
+    const PostgresStore = connectPg(session);
+    this.sessionStore = new PostgresStore({
+      conObject: {
+        connectionString: process.env.DATABASE_URL,
+      },
+      createTableIfMissing: true,
+    });
+  }
   // Agent operations
   async getAgents(): Promise<Agent[]> {
     return await db.select().from(agents).orderBy(agents.name);
@@ -393,5 +404,67 @@ export class DatabaseStorage implements IStorage {
   async createRevenueShare(insertRevenueShare: InsertRevenueShare): Promise<RevenueShare> {
     const result = await db.insert(revenueShares).values(insertRevenueShare).returning();
     return result[0];
+  }
+
+  // User operations
+  async getUser(id: number): Promise<User | undefined> {
+    const result = await db.select().from(users).where(eq(users.id, id));
+    return result.length ? result[0] : undefined;
+  }
+
+  async getUserByUsername(username: string): Promise<User | undefined> {
+    const result = await db.select().from(users).where(eq(users.username, username));
+    return result.length ? result[0] : undefined;
+  }
+
+  async createUser(insertUser: InsertUser): Promise<User> {
+    const result = await db.insert(users).values(insertUser).returning();
+    return result[0];
+  }
+
+  async updateUser(id: number, userUpdate: Partial<User>): Promise<User | undefined> {
+    const result = await db
+      .update(users)
+      .set(userUpdate)
+      .where(eq(users.id, id))
+      .returning();
+    
+    return result.length ? result[0] : undefined;
+  }
+
+  async deleteUser(id: number): Promise<boolean> {
+    try {
+      const result = await db.delete(users).where(eq(users.id, id)).returning();
+      return result.length > 0;
+    } catch (error) {
+      console.error('Error deleting user:', error);
+      return false;
+    }
+  }
+
+  async getUserByEmail(email: string): Promise<User | undefined> {
+    const result = await db.select().from(users).where(eq(users.email, email));
+    return result.length ? result[0] : undefined;
+  }
+
+  async getUserByResetToken(token: string): Promise<User | undefined> {
+    const result = await db
+      .select()
+      .from(users)
+      .where(
+        and(
+          eq(users.resetToken, token),
+          sql`${users.resetTokenExpiry} > NOW()`
+        )
+      );
+    return result.length ? result[0] : undefined;
+  }
+
+  async getAgentUser(agentId: number): Promise<User | undefined> {
+    const result = await db
+      .select()
+      .from(users)
+      .where(eq(users.agentId, agentId));
+    return result.length ? result[0] : undefined;
   }
 }
