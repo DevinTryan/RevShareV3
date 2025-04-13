@@ -369,6 +369,37 @@ const EditTransactionForm = ({ transaction, onClose }: EditTransactionFormProps)
   const quarter = `Q${Math.floor(transactionDate.getMonth() / 3) + 1}`;
   const year = transactionDate.getFullYear();
 
+  // Add a direct submit function for debugging
+  const submitForm = (e: React.MouseEvent) => {
+    e.preventDefault();
+    console.log("Direct form submit clicked");
+    console.log("Current form values:", form.getValues());
+    console.log("Form state:", form.formState);
+    
+    if (Object.keys(form.formState.errors).length > 0) {
+      console.error("Form has validation errors:", form.formState.errors);
+      toast({
+        title: "Validation Error",
+        description: "Please check the form for errors",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    try {
+      console.log("Manually triggering form submission");
+      const values = form.getValues();
+      updateTransactionMutation.mutate(values);
+    } catch (err) {
+      console.error("Error in direct submit:", err);
+      toast({
+        title: "Error",
+        description: "An unexpected error occurred",
+        variant: "destructive",
+      });
+    }
+  };
+
   return (
     <div className="bg-white rounded-lg w-full max-w-5xl mx-auto">
       <div className="p-4">
@@ -1196,6 +1227,37 @@ const EditTransactionForm = ({ transaction, onClose }: EditTransactionFormProps)
                 </div>
               </TabsContent>
             </Tabs>
+            
+            {/* Add a direct save button that's always visible regardless of tab */}
+            <div className="flex justify-between mt-4 pt-4 border-t">
+              <Button 
+                type="button" 
+                variant="outline" 
+                onClick={onClose}
+              >
+                Back
+              </Button>
+              
+              <div className="flex space-x-2">
+                <Button
+                  type="button"
+                  variant="destructive"
+                  onClick={handleDelete}
+                  disabled={updateTransactionMutation.isPending || deleteTransactionMutation.isPending}
+                >
+                  {deleteTransactionMutation.isPending ? "Deleting..." : "Delete"}
+                </Button>
+                
+                <Button
+                  type="button"
+                  onClick={submitForm}
+                  disabled={updateTransactionMutation.isPending}
+                  className="bg-primary hover:bg-primary/90"
+                >
+                  {updateTransactionMutation.isPending ? "Saving..." : "Save Changes"}
+                </Button>
+              </div>
+            </div>
           </form>
         </Form>
       </div>
