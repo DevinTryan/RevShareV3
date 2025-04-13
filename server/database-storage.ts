@@ -467,4 +467,221 @@ export class DatabaseStorage implements IStorage {
       .where(eq(users.agentId, agentId));
     return result.length ? result[0] : undefined;
   }
+
+  // Reports-related methods
+  
+  /**
+   * Get filtered transactions based on various criteria
+   */
+  async getFilteredTransactions(filters: any): Promise<Transaction[]> {
+    let query = db.select().from(transactions);
+    
+    // Apply date range filter
+    if (filters.dateRange) {
+      query = query.where(
+        and(
+          sql`${transactions.transactionDate} >= ${filters.dateRange.start}`,
+          sql`${transactions.transactionDate} <= ${filters.dateRange.end}`
+        )
+      );
+    }
+    
+    // Apply agent filter
+    if (filters.agentId) {
+      query = query.where(eq(transactions.agentId, filters.agentId));
+    }
+    
+    // Apply transaction type filter
+    if (filters.transactionType) {
+      query = query.where(eq(transactions.transactionType, filters.transactionType));
+    }
+    
+    // Apply lead source filter
+    if (filters.leadSource) {
+      query = query.where(eq(transactions.leadSource, filters.leadSource));
+    }
+    
+    // Apply address filter
+    if (filters.address) {
+      query = query.where(sql`${transactions.propertyAddress} ILIKE ${`%${filters.address}%`}`);
+    }
+    
+    // Apply zip code filter
+    if (filters.zipCode) {
+      query = query.where(sql`${transactions.propertyAddress} ILIKE ${`%${filters.zipCode}%`}`);
+    }
+    
+    // Apply sale amount range filters
+    if (filters.minSaleAmount) {
+      query = query.where(sql`${transactions.saleAmount} >= ${filters.minSaleAmount}`);
+    }
+    
+    if (filters.maxSaleAmount) {
+      query = query.where(sql`${transactions.saleAmount} <= ${filters.maxSaleAmount}`);
+    }
+    
+    // Order by transaction date (newest first)
+    query = query.orderBy(desc(transactions.transactionDate));
+    
+    return await query;
+  }
+
+  /**
+   * Get agent performance metrics (GCI, volume, transactions count, etc.)
+   */
+  async getAgentPerformanceReport(filters: any): Promise<any[]> {
+    // Base query conditions
+    const conditions = [];
+    
+    // Apply date range filter
+    if (filters.dateRange) {
+      conditions.push(sql`${transactions.transactionDate} >= ${filters.dateRange.start}`);
+      conditions.push(sql`${transactions.transactionDate} <= ${filters.dateRange.end}`);
+    }
+    
+    // Apply agent filter if specified
+    if (filters.agentId) {
+      conditions.push(sql`${transactions.agentId} = ${filters.agentId}`);
+    }
+    
+    const whereClause = conditions.length > 0 ? sql`WHERE ${sql.join(conditions, sql` AND `)}` : sql``;
+    
+    // Main query to get agent performance metrics
+    const query = sql`
+      SELECT 
+        a.id AS "agentId",
+        a.name AS "agentName",
+        a.agent_type AS "agentType",
+        COUNT(t.id) AS "transactionCount",
+        SUM(t.sale_amount) AS "totalVolume",
+        SUM(t.company_gci) AS "totalGCI",
+        SUM(t.agent_commission_amount) AS "totalAgentIncome",
+        SUM(t.company_gci) - SUM(COALESCE(t.agent_commission_amount, 0)) AS "totalCompanyIncome",
+        AVG(t.sale_amount) AS "averageSalePrice"
+      FROM agents a
+      LEFT JOIN transactions t ON a.id = t.agent_id
+      ${whereClause}
+      GROUP BY a.id, a.name, a.agent_type
+      ORDER BY "totalVolume" DESC
+    `;
+    
+    return await db.execute(query);
+  }
+
+  /**
+   * Get lead source performance metrics
+   */
+  async getLeadSourceReport(filters: any): Promise<any[]> {
+    // Base query conditions
+    const conditions = [];
+    
+    // Apply date range filter
+    if (filters.dateRange) {
+      conditions.push(sql`${transactions.transactionDate} >= ${filters.dateRange.start}`);
+      conditions.push(sql`${transactions.transactionDate} <= ${filters.dateRange.end}`);
+    }
+    
+    // Apply agent filter if specified
+    if (filters.agentId) {
+      conditions.push(sql`${transactions.agentId} = ${filters.agentId}`);
+    }
+    
+    const whereClause = conditions.length > 0 ? sql`WHERE ${sql.join(conditions, sql` AND `)}` : sql``;
+    
+    // Main query to get lead source performance metrics
+    const query = sql`
+      SELECT 
+        COALESCE(t.lead_source, 'unknown') AS "leadSource",
+        COUNT(t.id) AS "transactionCount",
+        SUM(t.sale_amount) AS "totalVolume",
+        SUM(t.company_gci) AS "totalGCI",
+        SUM(t.agent_commission_amount) AS "totalAgentIncome",
+        SUM(t.company_gci) - SUM(COALESCE(t.agent_commission_amount, 0)) AS "totalCompanyIncome",
+        AVG(t.sale_amount) AS "averageSalePrice"
+      FROM transactions t
+      ${whereClause}
+      GROUP BY t.lead_source
+      ORDER BY "transactionCount" DESC
+    `;
+    
+    return await db.execute(query);
+  }
+
+  /**
+   * Get income distribution between agents and company
+   */
+  async getIncomeDistributionReport(filters: any): Promise<any> {
+    // Base query conditions
+    const conditions = [];
+    
+    // Apply date range filter
+    if (filters.dateRange) {
+      conditions.push(sql`${transactions.transactionDate} >= ${filters.dateRange.start}`);
+      conditions.push(sql`${transactions.transactionDate} <= ${filters.dateRange.end}`);
+    }
+    
+    // Apply agent filter if specified
+    if (filters.agentId) {
+      conditions.push(sql`${transactions.agentId} = ${filters.agentId}`);
+    }
+    
+    const whereClause = conditions.length > 0 ? sql`WHERE ${sql.join(conditions, sql` AND `)}` : sql``;
+    
+    // Main query to get income distribution metrics
+    const query = sql`
+      SELECT 
+        SUM(t.company_gci) AS "totalGCI",
+        SUM(t.agent_commission_amount) AS "totalAgentIncome",
+        SUM(t.company_gci) - SUM(COALESCE(t.agent_commission_amount, 0)) AS "totalCompanyIncome",
+        SUM(t.showing_agent_fee) AS "totalShowingAgentFees",
+        SUM(t.referral_amount) AS "totalReferralFees",
+        COUNT(DISTINCT t.agent_id) AS "activeAgentCount",
+        COUNT(t.id) AS "transactionCount"
+      FROM transactions t
+      ${whereClause}
+    `;
+    
+    const results = await db.execute(query);
+    return results[0] || {};
+  }
+
+  /**
+   * Get transaction analysis by zip code
+   */
+  async getZipCodeAnalysisReport(filters: any): Promise<any[]> {
+    // Base query conditions
+    const conditions = [];
+    
+    // Apply date range filter
+    if (filters.dateRange) {
+      conditions.push(sql`${transactions.transactionDate} >= ${filters.dateRange.start}`);
+      conditions.push(sql`${transactions.transactionDate} <= ${filters.dateRange.end}`);
+    }
+    
+    const whereClause = conditions.length > 0 ? sql`WHERE ${sql.join(conditions, sql` AND `)}` : sql``;
+    
+    // Extract zip code from property address using regex
+    const query = sql`
+      WITH zipcode_extract AS (
+        SELECT 
+          t.*,
+          SUBSTRING(t.property_address FROM '\\d{5}') AS zip_code
+        FROM transactions t
+        ${whereClause}
+      )
+      SELECT 
+        COALESCE(zip_code, 'Unknown') AS "zipCode",
+        COUNT(*) AS "transactionCount",
+        SUM(sale_amount) AS "totalVolume",
+        SUM(company_gci) AS "totalGCI",
+        SUM(agent_commission_amount) AS "totalAgentIncome",
+        SUM(company_gci) - SUM(COALESCE(agent_commission_amount, 0)) AS "totalCompanyIncome",
+        AVG(sale_amount) AS "averageSalePrice"
+      FROM zipcode_extract
+      GROUP BY zip_code
+      ORDER BY "transactionCount" DESC
+    `;
+    
+    return await db.execute(query);
+  }
 }

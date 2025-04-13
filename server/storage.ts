@@ -44,6 +44,13 @@ export interface IStorage {
   getUserByEmail(email: string): Promise<User | undefined>;
   getUserByResetToken(token: string): Promise<User | undefined>;
   getAgentUser(agentId: number): Promise<User | undefined>;
+  
+  // Reports operations
+  getFilteredTransactions(filters: any): Promise<Transaction[]>;
+  getAgentPerformanceReport(filters: any): Promise<any[]>;
+  getLeadSourceReport(filters: any): Promise<any[]>;
+  getIncomeDistributionReport(filters: any): Promise<any>;
+  getZipCodeAnalysisReport(filters: any): Promise<any[]>;
 }
 
 export class MemStorage implements IStorage {
@@ -439,6 +446,221 @@ export class MemStorage implements IStorage {
   async getAgentUser(agentId: number): Promise<User | undefined> {
     const users = Array.from(this.users.values());
     return users.find(user => user.agentId === agentId);
+  }
+
+  // Reports operations
+  async getFilteredTransactions(filters: any): Promise<Transaction[]> {
+    let transactions = Array.from(this.transactions.values());
+    
+    // Apply date range filter
+    if (filters.dateRange) {
+      transactions = transactions.filter(transaction => {
+        const txDate = new Date(transaction.transactionDate);
+        return txDate >= filters.dateRange.start && txDate <= filters.dateRange.end;
+      });
+    }
+    
+    // Apply agent filter
+    if (filters.agentId) {
+      transactions = transactions.filter(transaction => transaction.agentId === filters.agentId);
+    }
+    
+    // Apply transaction type filter
+    if (filters.transactionType) {
+      transactions = transactions.filter(transaction => transaction.transactionType === filters.transactionType);
+    }
+    
+    // Apply lead source filter
+    if (filters.leadSource) {
+      transactions = transactions.filter(transaction => transaction.leadSource === filters.leadSource);
+    }
+    
+    // Apply address filter
+    if (filters.address) {
+      const addressLower = filters.address.toLowerCase();
+      transactions = transactions.filter(transaction => 
+        transaction.propertyAddress?.toLowerCase().includes(addressLower)
+      );
+    }
+    
+    // Apply zip code filter
+    if (filters.zipCode) {
+      const zipCodeStr = filters.zipCode.toString();
+      transactions = transactions.filter(transaction => 
+        transaction.propertyAddress?.includes(zipCodeStr)
+      );
+    }
+    
+    // Apply sale amount range filters
+    if (filters.minSaleAmount) {
+      transactions = transactions.filter(transaction => 
+        transaction.saleAmount >= filters.minSaleAmount
+      );
+    }
+    
+    if (filters.maxSaleAmount) {
+      transactions = transactions.filter(transaction => 
+        transaction.saleAmount <= filters.maxSaleAmount
+      );
+    }
+    
+    // Sort by transaction date (newest first)
+    transactions.sort((a, b) => 
+      new Date(b.transactionDate).getTime() - new Date(a.transactionDate).getTime()
+    );
+    
+    return transactions;
+  }
+
+  async getAgentPerformanceReport(filters: any): Promise<any[]> {
+    const agents = Array.from(this.agents.values());
+    const transactions = await this.getFilteredTransactions(filters);
+    
+    return agents.map(agent => {
+      const agentTransactions = transactions.filter(tx => tx.agentId === agent.id);
+      
+      const totalVolume = agentTransactions.reduce((sum, tx) => sum + tx.saleAmount, 0);
+      const totalGCI = agentTransactions.reduce((sum, tx) => sum + tx.companyGCI, 0);
+      const totalAgentIncome = agentTransactions.reduce((sum, tx) => sum + (tx.agentCommissionAmount || 0), 0);
+      const totalCompanyIncome = totalGCI - totalAgentIncome;
+      const averageSalePrice = agentTransactions.length > 0 
+        ? totalVolume / agentTransactions.length 
+        : 0;
+      
+      return {
+        agentId: agent.id,
+        agentName: agent.name,
+        agentType: agent.agentType,
+        transactionCount: agentTransactions.length,
+        totalVolume,
+        totalGCI,
+        totalAgentIncome,
+        totalCompanyIncome,
+        averageSalePrice
+      };
+    }).sort((a, b) => b.totalVolume - a.totalVolume);
+  }
+
+  async getLeadSourceReport(filters: any): Promise<any[]> {
+    const transactions = await this.getFilteredTransactions(filters);
+    const leadSourceMap = new Map<string, any>();
+    
+    // Group transactions by lead source
+    transactions.forEach(tx => {
+      const leadSource = tx.leadSource || 'unknown';
+      
+      if (!leadSourceMap.has(leadSource)) {
+        leadSourceMap.set(leadSource, {
+          leadSource,
+          transactions: [],
+          transactionCount: 0,
+          totalVolume: 0,
+          totalGCI: 0,
+          totalAgentIncome: 0,
+          totalCompanyIncome: 0,
+          averageSalePrice: 0
+        });
+      }
+      
+      const leadSourceData = leadSourceMap.get(leadSource);
+      leadSourceData.transactions.push(tx);
+    });
+    
+    // Calculate metrics for each lead source
+    const result = Array.from(leadSourceMap.values()).map(data => {
+      const { transactions } = data;
+      
+      data.transactionCount = transactions.length;
+      data.totalVolume = transactions.reduce((sum, tx) => sum + tx.saleAmount, 0);
+      data.totalGCI = transactions.reduce((sum, tx) => sum + tx.companyGCI, 0);
+      data.totalAgentIncome = transactions.reduce((sum, tx) => sum + (tx.agentCommissionAmount || 0), 0);
+      data.totalCompanyIncome = data.totalGCI - data.totalAgentIncome;
+      data.averageSalePrice = data.transactionCount > 0 
+        ? data.totalVolume / data.transactionCount 
+        : 0;
+      
+      // Remove transactions array from result
+      delete data.transactions;
+      
+      return data;
+    });
+    
+    // Sort by transaction count (highest first)
+    return result.sort((a, b) => b.transactionCount - a.transactionCount);
+  }
+
+  async getIncomeDistributionReport(filters: any): Promise<any> {
+    const transactions = await this.getFilteredTransactions(filters);
+    
+    const totalGCI = transactions.reduce((sum, tx) => sum + tx.companyGCI, 0);
+    const totalAgentIncome = transactions.reduce((sum, tx) => sum + (tx.agentCommissionAmount || 0), 0);
+    const totalCompanyIncome = totalGCI - totalAgentIncome;
+    const totalShowingAgentFees = transactions.reduce((sum, tx) => sum + (tx.showingAgentFee || 0), 0);
+    const totalReferralFees = transactions.reduce((sum, tx) => sum + (tx.referralAmount || 0), 0);
+    
+    // Count unique agents
+    const uniqueAgentIds = new Set(transactions.map(tx => tx.agentId));
+    
+    return {
+      totalGCI,
+      totalAgentIncome,
+      totalCompanyIncome,
+      totalShowingAgentFees,
+      totalReferralFees,
+      activeAgentCount: uniqueAgentIds.size,
+      transactionCount: transactions.length
+    };
+  }
+
+  async getZipCodeAnalysisReport(filters: any): Promise<any[]> {
+    const transactions = await this.getFilteredTransactions(filters);
+    const zipCodeMap = new Map<string, any>();
+    
+    // Extract zip codes and group transactions
+    transactions.forEach(tx => {
+      const address = tx.propertyAddress || '';
+      // Try to extract zip code using regex
+      const zipCodeMatch = address.match(/\d{5}/);
+      const zipCode = zipCodeMatch ? zipCodeMatch[0] : 'Unknown';
+      
+      if (!zipCodeMap.has(zipCode)) {
+        zipCodeMap.set(zipCode, {
+          zipCode,
+          transactions: [],
+          transactionCount: 0,
+          totalVolume: 0,
+          totalGCI: 0,
+          totalAgentIncome: 0,
+          totalCompanyIncome: 0,
+          averageSalePrice: 0
+        });
+      }
+      
+      const zipCodeData = zipCodeMap.get(zipCode);
+      zipCodeData.transactions.push(tx);
+    });
+    
+    // Calculate metrics for each zip code
+    const result = Array.from(zipCodeMap.values()).map(data => {
+      const { transactions } = data;
+      
+      data.transactionCount = transactions.length;
+      data.totalVolume = transactions.reduce((sum, tx) => sum + tx.saleAmount, 0);
+      data.totalGCI = transactions.reduce((sum, tx) => sum + tx.companyGCI, 0);
+      data.totalAgentIncome = transactions.reduce((sum, tx) => sum + (tx.agentCommissionAmount || 0), 0);
+      data.totalCompanyIncome = data.totalGCI - data.totalAgentIncome;
+      data.averageSalePrice = data.transactionCount > 0 
+        ? data.totalVolume / data.transactionCount 
+        : 0;
+      
+      // Remove transactions array from result
+      delete data.transactions;
+      
+      return data;
+    });
+    
+    // Sort by transaction count (highest first)
+    return result.sort((a, b) => b.transactionCount - a.transactionCount);
   }
 }
 
