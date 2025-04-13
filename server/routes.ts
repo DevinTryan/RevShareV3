@@ -46,7 +46,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/agents/root", async (req: Request, res: Response) => {
+  app.get("/api/agents/root", requireAuth, async (req: Request, res: Response) => {
     try {
       const agents = await storage.getAgentsByRootLevelOnly();
       res.json(agents);
@@ -55,7 +55,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/agents/:id", async (req: Request, res: Response) => {
+  app.get("/api/agents/:id", requireAgentAccess, async (req: Request, res: Response) => {
     try {
       const id = parseInt(req.params.id);
       const agent = await storage.getAgent(id);
@@ -70,7 +70,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/agents/:id/downline", async (req: Request, res: Response) => {
+  app.get("/api/agents/:id/downline", requireAgentAccess, async (req: Request, res: Response) => {
     try {
       const id = parseInt(req.params.id);
       const agent = await storage.getAgentWithDownline(id);
@@ -85,7 +85,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/agents", async (req: Request, res: Response) => {
+  app.post("/api/agents", requireAdmin, async (req: Request, res: Response) => {
     try {
       const agentData = insertAgentSchema.parse(req.body);
       const agent = await storage.createAgent(agentData);
@@ -99,7 +99,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put("/api/agents/:id", async (req: Request, res: Response) => {
+  app.put("/api/agents/:id", requireAdmin, async (req: Request, res: Response) => {
     try {
       const id = parseInt(req.params.id);
       const agentData = req.body;
@@ -116,7 +116,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/agents/:id", async (req: Request, res: Response) => {
+  app.delete("/api/agents/:id", requireAdmin, async (req: Request, res: Response) => {
     try {
       const id = parseInt(req.params.id);
       const success = await storage.deleteAgent(id);
@@ -132,7 +132,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // API Routes for Transactions
-  app.get("/api/transactions", async (req: Request, res: Response) => {
+  app.get("/api/transactions", requireAuth, async (req: Request, res: Response) => {
     try {
       const transactions = await storage.getTransactions();
       res.json(transactions);
@@ -141,7 +141,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/transactions/:id", async (req: Request, res: Response) => {
+  app.get("/api/transactions/:id", requireAuth, async (req: Request, res: Response) => {
     try {
       const id = parseInt(req.params.id);
       const transaction = await storage.getTransaction(id);
@@ -156,7 +156,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/agents/:id/transactions", async (req: Request, res: Response) => {
+  app.get("/api/agents/:id/transactions", requireAgentAccess, async (req: Request, res: Response) => {
     try {
       const agentId = parseInt(req.params.id);
       const transactions = await storage.getAgentTransactions(agentId);
@@ -254,7 +254,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/agents/:id/revenue-shares", async (req: Request, res: Response) => {
+  app.get("/api/agents/:id/revenue-shares", requireAgentAccess, async (req: Request, res: Response) => {
     try {
       const agentId = parseInt(req.params.id);
       const revenueShares = await storage.getRevenueSharesByAgent(agentId);
