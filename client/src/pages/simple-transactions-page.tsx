@@ -22,7 +22,8 @@ export default function SimpleTransactionsPage() {
 
   // Get agent name from ID
   const getAgentName = (agentId: number) => {
-    const agent = agents?.find((a: any) => a.id === agentId);
+    if (!agents || !Array.isArray(agents)) return `Agent #${agentId}`;
+    const agent = agents.find((a: any) => a.id === agentId);
     return agent ? agent.name : `Agent #${agentId}`;
   };
 
@@ -61,7 +62,7 @@ export default function SimpleTransactionsPage() {
         </Link>
       </div>
 
-      {transactions?.length === 0 ? (
+      {!transactions || (Array.isArray(transactions) && transactions.length === 0) ? (
         <Card>
           <CardContent className="py-10">
             <div className="text-center">
@@ -76,7 +77,7 @@ export default function SimpleTransactionsPage() {
         </Card>
       ) : (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {transactions?.map((transaction: any) => (
+          {Array.isArray(transactions) && transactions.map((transaction: any) => (
             <Card
               key={transaction.id}
               className="cursor-pointer hover:border-primary transition-colors"

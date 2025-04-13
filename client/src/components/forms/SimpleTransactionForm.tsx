@@ -144,11 +144,14 @@ export default function SimpleTransactionForm() {
                   <SelectValue placeholder="Select an agent" />
                 </SelectTrigger>
                 <SelectContent>
-                  {agents && Array.isArray(agents) && agents.map((agent: any) => (
-                    <SelectItem key={agent.id} value={agent.id.toString()}>
-                      {agent.name}
-                    </SelectItem>
-                  ))}
+                  {agents && Array.isArray(agents) ? 
+                    agents.map((agent: any) => (
+                      <SelectItem key={agent.id} value={agent.id.toString()}>
+                        {agent.name}
+                      </SelectItem>
+                    )) : 
+                    <SelectItem value="">No agents found</SelectItem>
+                  }
                 </SelectContent>
               </Select>
               {form.formState.errors.agentId && (

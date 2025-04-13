@@ -13,7 +13,7 @@ export default function SimpleTransactionPage() {
 
   // If editing, fetch the transaction data
   const { data: transaction, isLoading } = useQuery({
-    queryKey: transactionId ? [`/api/transactions/${transactionId}`] : null,
+    queryKey: transactionId ? [`/api/transactions/${transactionId}`] : ['skip-query'],
     enabled: !!transactionId,
   });
 
