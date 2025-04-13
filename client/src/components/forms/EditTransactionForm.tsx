@@ -232,11 +232,10 @@ const EditTransactionForm = ({ transaction, onClose }: EditTransactionFormProps)
         additionalAgentCost: data.additionalAgentCost,
         transactionDate: new Date(data.transactionDate).toISOString(),
         manualCommissionAmount: data.manualCommissionEntry ? data.manualCommissionAmount : null,
-        additionalAgents: data.additionalAgents.map(agent => ({
-          agentId: agent.agentId,
-          percentage: agent.percentage,
-          additionalCost: agent.additionalCost
-        })),
+        // Limit to just one additional agent for now (server is designed to handle just one)
+        additionalAgentId: data.additionalAgents.length > 0 ? data.additionalAgents[0].agentId : null,
+        additionalAgentPercentage: data.additionalAgents.length > 0 ? data.additionalAgents[0].percentage : null,
+        additionalAgentFee: data.additionalAgents.length > 0 ? data.additionalAgents[0].additionalCost : null,
         
         // Additional fields
         source: data.source,
@@ -271,7 +270,9 @@ const EditTransactionForm = ({ transaction, onClose }: EditTransactionFormProps)
           throw new Error(`Server error: ${response.status} - ${errorText}`);
         }
         
-        return response.json();
+        const result = await response.json();
+        console.log("API response:", result);
+        return result;
       } catch (error) {
         console.error("Error updating transaction:", error);
         throw error;
@@ -324,6 +325,7 @@ const EditTransactionForm = ({ transaction, onClose }: EditTransactionFormProps)
 
   const onSubmit = (data: z.infer<typeof editTransactionSchema>) => {
     console.log("Form submitted with data:", data);
+    console.log("Form state:", form.formState);
     
     // Add debugging to check for form validation errors
     if (Object.keys(form.formState.errors).length > 0) {
@@ -336,7 +338,18 @@ const EditTransactionForm = ({ transaction, onClose }: EditTransactionFormProps)
       return;
     }
     
-    updateTransactionMutation.mutate(data);
+    try {
+      console.log("About to call updateTransactionMutation.mutate()");
+      updateTransactionMutation.mutate(data);
+      console.log("Called updateTransactionMutation.mutate() successfully");
+    } catch (err) {
+      console.error("Error in mutation call:", err);
+      toast({
+        title: "Error",
+        description: "An unexpected error occurred while submitting the form",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleDelete = () => {
