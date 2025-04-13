@@ -270,8 +270,8 @@ export class MemStorage implements IStorage {
   private async getTotalPaidToSponsor(sponsorId: number, agentId: number): Promise<number> {
     const revenueShares = Array.from(this.revenueShares.values());
     const relevantShares = revenueShares.filter(share => 
-      share.sponsorId === sponsorId && 
-      this.isFromAgent(share.transactionId, agentId)
+      share.recipientAgentId === sponsorId && 
+      share.sourceAgentId === agentId
     );
     
     if (relevantShares.length === 0) return 0;
@@ -297,7 +297,7 @@ export class MemStorage implements IStorage {
 
   async getRevenueSharesByAgent(agentId: number): Promise<RevenueShare[]> {
     const revenueShares = Array.from(this.revenueShares.values());
-    return revenueShares.filter(share => share.sponsorId === agentId);
+    return revenueShares.filter(share => share.recipientAgentId === agentId || share.sourceAgentId === agentId);
   }
 
   async createRevenueShare(insertRevenueShare: InsertRevenueShare): Promise<RevenueShare> {

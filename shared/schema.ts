@@ -42,7 +42,8 @@ export const transactions = pgTable("transactions", {
 export const revenueShares = pgTable("revenue_shares", {
   id: serial("id").primaryKey(),
   transactionId: integer("transaction_id").notNull().references(() => transactions.id),
-  sponsorId: integer("sponsor_id").notNull().references(() => agents.id),
+  sourceAgentId: integer("source_agent_id").notNull().references(() => agents.id),
+  recipientAgentId: integer("recipient_agent_id").notNull().references(() => agents.id),
   amount: doublePrecision("amount").notNull(),
   tier: integer("tier").notNull(), // 1-5 levels
   createdAt: timestamp("created_at").defaultNow(),
