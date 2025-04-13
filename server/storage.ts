@@ -316,4 +316,19 @@ export class MemStorage implements IStorage {
   }
 }
 
-export const storage = new MemStorage();
+// Import database storage
+import { DatabaseStorage } from './database-storage';
+
+// Determine which storage to use based on environment
+let storage: IStorage;
+
+// Check if DATABASE_URL exists to determine if we should use database storage
+if (process.env.DATABASE_URL) {
+  console.log('Using database storage');
+  storage = new DatabaseStorage();
+} else {
+  console.log('Using memory storage');
+  storage = new MemStorage();
+}
+
+export { storage };
