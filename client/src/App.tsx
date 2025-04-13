@@ -6,6 +6,7 @@ import Dashboard from "@/pages/Dashboard";
 import AgentsPage from "@/pages/AgentsPage";
 import TransactionsPage from "@/pages/TransactionsPage";
 import RevenueSharePage from "@/pages/RevenueSharePage";
+import SettingsPage from "@/pages/SettingsPage";
 import NotFound from "@/pages/not-found";
 import Sidebar from "@/components/layout/Sidebar";
 import MobileHeader from "@/components/layout/MobileHeader";
@@ -31,6 +32,7 @@ function Router() {
             <Route path="/agents" component={AgentsPage} />
             <Route path="/transactions" component={TransactionsPage} />
             <Route path="/revenue-share" component={RevenueSharePage} />
+            <Route path="/settings" component={SettingsPage} />
             <Route component={NotFound} />
           </Switch>
         </main>
