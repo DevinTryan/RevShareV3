@@ -314,8 +314,13 @@ export class DatabaseStorage implements IStorage {
       const transaction = result[0] as Transaction;
       console.log("Transaction created successfully:", JSON.stringify(transaction));
       
-      // Process revenue shares for this transaction
-      await this.processRevenueShare(transaction);
+      try {
+        // Process revenue shares for this transaction
+        await this.processRevenueShare(transaction);
+      } catch (error) {
+        console.error("Error processing revenue shares, but transaction was created:", error);
+        // Continue even if revenue share processing fails
+      }
       
       return transaction;
     } catch (error) {
@@ -409,13 +414,18 @@ export class DatabaseStorage implements IStorage {
       
       // If companyGCI has changed, update revenue shares
       if (oldCompanyGCI !== updatedTransaction.companyGCI) {
-        // Delete old revenue shares
-        await db
-          .delete(revenueShares)
-          .where(eq(revenueShares.transactionId, id));
-        
-        // Process new revenue shares
-        await this.processRevenueShare(updatedTransaction);
+        try {
+          // Delete old revenue shares
+          await db
+            .delete(revenueShares)
+            .where(eq(revenueShares.transactionId, id));
+          
+          // Process new revenue shares
+          await this.processRevenueShare(updatedTransaction);
+        } catch (error) {
+          console.error("Error updating revenue shares, but transaction was updated:", error);
+          // Continue even if revenue share processing fails
+        }
       }
       
       return updatedTransaction;
