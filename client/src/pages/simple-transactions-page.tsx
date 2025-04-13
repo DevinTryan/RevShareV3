@@ -76,47 +76,44 @@ export default function SimpleTransactionsPage() {
           </CardContent>
         </Card>
       ) : (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {Array.isArray(transactions) && transactions.map((transaction: any) => (
-            <Card
-              key={transaction.id}
-              className="cursor-pointer hover:border-primary transition-colors"
-              onClick={() => handleTransactionClick(transaction.id)}
-            >
-              <CardHeader className="pb-2">
-                <CardTitle className="text-lg font-bold">{transaction.propertyAddress}</CardTitle>
-                <p className="text-sm text-muted-foreground">
-                  {getAgentName(transaction.agentId)}
-                </p>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-2">
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Sale Amount:</span>
-                    <span className="font-medium">{formatCurrency(transaction.saleAmount)}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Company GCI:</span>
-                    <span className="font-medium">{formatCurrency(transaction.companyGCI)}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Agent GCI:</span>
-                    <span className="font-medium">{formatCurrency(transaction.agentCommissionAmount)}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Date:</span>
-                    <span className="font-medium">
-                      {transaction.transactionDate ? (
-                        format(new Date(transaction.transactionDate), "MMM dd, yyyy")
-                      ) : (
+        <div className="rounded-md border bg-white">
+          <div className="relative w-full overflow-auto">
+            <table className="w-full caption-bottom text-sm">
+              <thead className="border-b bg-gray-50">
+                <tr>
+                  <th className="h-12 px-4 text-left font-medium">ID</th>
+                  <th className="h-12 px-4 text-left font-medium">Date</th>
+                  <th className="h-12 px-4 text-left font-medium">Agent</th>
+                  <th className="h-12 px-4 text-left font-medium">Property Address</th>
+                  <th className="h-12 px-4 text-right font-medium">Sale Amount</th>
+                  <th className="h-12 px-4 text-right font-medium">Company GCI</th>
+                  <th className="h-12 px-4 text-right font-medium">Agent GCI</th>
+                </tr>
+              </thead>
+              <tbody>
+                {Array.isArray(transactions) && transactions.map((transaction: any) => (
+                  <tr 
+                    key={transaction.id}
+                    className="border-b hover:bg-gray-50 cursor-pointer"
+                    onClick={() => handleTransactionClick(transaction.id)}
+                  >
+                    <td className="p-4 align-middle">{transaction.id}</td>
+                    <td className="p-4 align-middle">
+                      {transaction.transactionDate ? 
+                        format(new Date(transaction.transactionDate), "MMM dd, yyyy") : 
                         "N/A"
-                      )}
-                    </span>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+                      }
+                    </td>
+                    <td className="p-4 align-middle">{getAgentName(transaction.agentId)}</td>
+                    <td className="p-4 align-middle font-medium">{transaction.propertyAddress}</td>
+                    <td className="p-4 align-middle text-right">{formatCurrency(transaction.saleAmount)}</td>
+                    <td className="p-4 align-middle text-right">{formatCurrency(transaction.companyGCI)}</td>
+                    <td className="p-4 align-middle text-right">{formatCurrency(transaction.agentCommissionAmount)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
     </div>
