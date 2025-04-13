@@ -329,7 +329,7 @@ const EditTransactionForm = ({ transaction, onClose }: EditTransactionFormProps)
   const year = transactionDate.getFullYear();
 
   return (
-    <div className="bg-white rounded-lg">
+    <div className="bg-white rounded-lg w-full max-w-5xl mx-auto">
       <div className="p-4">
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)}>

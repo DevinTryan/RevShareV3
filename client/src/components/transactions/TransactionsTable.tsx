@@ -130,8 +130,8 @@ const TransactionsTable = ({ limit, showViewAll = false, onViewAllClick }: Trans
     <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
       {/* Edit Transaction Dialog */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
-          <DialogTitle className="text-lg font-semibold text-gray-900">
+        <DialogContent className="sm:max-w-[90vw] max-h-[90vh] overflow-y-auto p-0">
+          <DialogTitle className="text-lg font-semibold text-gray-900 p-6 pb-2">
             Edit Transaction
           </DialogTitle>
           {editingTransaction && (
