@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import TransactionsTable from "@/components/transactions/TransactionsTable";
 import AddTransactionForm from "@/components/forms/AddTransactionForm";
 
@@ -56,8 +56,8 @@ const TransactionsPage = () => {
 
       {/* Add Transaction Dialog */}
       <Dialog open={isAddTransactionDialogOpen} onOpenChange={setIsAddTransactionDialogOpen}>
-        <DialogContent className="sm:max-w-[500px]">
-          <h2 className="font-semibold text-gray-800 mb-4">Add New Transaction</h2>
+        <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
+          <DialogTitle className="font-semibold text-gray-800 mb-4">Add New Transaction</DialogTitle>
           <AddTransactionForm onTransactionAdded={() => setIsAddTransactionDialogOpen(false)} />
         </DialogContent>
       </Dialog>
