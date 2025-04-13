@@ -14,7 +14,7 @@ interface ExtendedRevenueShare extends RevenueShare {
 }
 
 const RevenueSharePage = () => {
-  const [selectedAgentId, setSelectedAgentId] = useState<string | null>(null);
+  const [selectedAgentId, setSelectedAgentId] = useState<string>("all");
   const [dateRange, setDateRange] = useState({
     from: new Date(new Date().getFullYear(), 0, 1).toISOString().split('T')[0], // Start of current year
     to: new Date().toISOString().split('T')[0], // Today
@@ -45,7 +45,7 @@ const RevenueSharePage = () => {
     toDate.setHours(23, 59, 59, 999); // End of the day
 
     const dateMatches = shareDate >= fromDate && shareDate <= toDate;
-    const agentMatches = !selectedAgentId || 
+    const agentMatches = selectedAgentId === "all" || 
                          share.recipientAgentId === parseInt(selectedAgentId);
 
     return dateMatches && agentMatches;
@@ -177,14 +177,14 @@ const RevenueSharePage = () => {
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Agent</label>
             <Select 
-              value={selectedAgentId || ""}
-              onValueChange={(value) => setSelectedAgentId(value || null)}
+              value={selectedAgentId}
+              onValueChange={(value) => setSelectedAgentId(value)}
             >
               <SelectTrigger>
                 <SelectValue placeholder="All Agents" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">All Agents</SelectItem>
+                <SelectItem value="all">All Agents</SelectItem>
                 {agents?.map(agent => (
                   <SelectItem key={agent.id} value={agent.id.toString()}>
                     {agent.name}
