@@ -537,9 +537,12 @@ export class DatabaseStorage implements IStorage {
     const conditions = [];
     
     // Apply date range filter
-    if (filters.dateRange) {
-      conditions.push(sql`t.transaction_date >= ${filters.dateRange.start}`);
-      conditions.push(sql`t.transaction_date <= ${filters.dateRange.end}`);
+    if (filters.startDate && filters.endDate) {
+      const startDate = new Date(filters.startDate);
+      const endDate = new Date(filters.endDate);
+      
+      conditions.push(sql`t.transaction_date >= ${startDate}`);
+      conditions.push(sql`t.transaction_date <= ${endDate}`);
     }
     
     // Apply agent filter if specified
@@ -579,9 +582,12 @@ export class DatabaseStorage implements IStorage {
     const conditions = [];
     
     // Apply date range filter
-    if (filters.dateRange) {
-      conditions.push(sql`t.transaction_date >= ${filters.dateRange.start}`);
-      conditions.push(sql`t.transaction_date <= ${filters.dateRange.end}`);
+    if (filters.startDate && filters.endDate) {
+      const startDate = new Date(filters.startDate);
+      const endDate = new Date(filters.endDate);
+      
+      conditions.push(sql`t.transaction_date >= ${startDate}`);
+      conditions.push(sql`t.transaction_date <= ${endDate}`);
     }
     
     // Apply agent filter if specified
@@ -618,9 +624,12 @@ export class DatabaseStorage implements IStorage {
     const conditions = [];
     
     // Apply date range filter
-    if (filters.dateRange) {
-      conditions.push(sql`t.transaction_date >= ${filters.dateRange.start}`);
-      conditions.push(sql`t.transaction_date <= ${filters.dateRange.end}`);
+    if (filters.startDate && filters.endDate) {
+      const startDate = new Date(filters.startDate);
+      const endDate = new Date(filters.endDate);
+      
+      conditions.push(sql`t.transaction_date >= ${startDate}`);
+      conditions.push(sql`t.transaction_date <= ${endDate}`);
     }
     
     // Apply agent filter if specified
@@ -656,9 +665,12 @@ export class DatabaseStorage implements IStorage {
     const conditions = [];
     
     // Apply date range filter
-    if (filters.dateRange) {
-      conditions.push(sql`t.transaction_date >= ${filters.dateRange.start}`);
-      conditions.push(sql`t.transaction_date <= ${filters.dateRange.end}`);
+    if (filters.startDate && filters.endDate) {
+      const startDate = new Date(filters.startDate);
+      const endDate = new Date(filters.endDate);
+      
+      conditions.push(sql`t.transaction_date >= ${startDate}`);
+      conditions.push(sql`t.transaction_date <= ${endDate}`);
     }
     
     const whereClause = conditions.length > 0 ? sql`WHERE ${sql.join(conditions, sql` AND `)}` : sql``;
