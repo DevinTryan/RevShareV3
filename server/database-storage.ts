@@ -457,34 +457,14 @@ export class DatabaseStorage implements IStorage {
   
   async getAgentTransactions(agentId: number): Promise<Transaction[]> {
     try {
-      // Use raw SQL to select only columns that exist in the database
-      const sql = `
-        SELECT 
-          id, 
-          agent_id as "agentId", 
-          property_address as "propertyAddress", 
-          sale_amount as "saleAmount", 
-          commission_percentage as "commissionPercentage", 
-          company_gci as "companyGCI", 
-          transaction_date as "transactionDate", 
-          created_at as "createdAt", 
-          client_name as "clientName", 
-          transaction_type as "transactionType", 
-          lead_source as "leadSource", 
-          is_company_provided as "isCompanyProvided", 
-          is_self_generated as "isSelfGenerated", 
-          referral_percentage as "referralPercentage", 
-          referral_amount as "referralAmount", 
-          showing_agent_id as "showingAgentId", 
-          showing_agent_fee as "showingAgentFee", 
-          agent_commission_amount as "agentCommissionAmount"
-        FROM transactions
-        WHERE agent_id = $1
-        ORDER BY transaction_date DESC
-      `;
-      
-      const result = await db.execute(sql, [agentId]);
-      return result as Transaction[];
+      // Use drizzle ORM methods instead of raw SQL to avoid column naming issues
+      const result = await db
+        .select()
+        .from(transactions)
+        .where(eq(transactions.agentId, agentId))
+        .orderBy(desc(transactions.transactionDate));
+        
+      return result;
     } catch (error) {
       console.error("Error retrieving agent transactions:", error);
       return [];
