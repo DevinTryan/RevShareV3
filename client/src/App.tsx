@@ -17,7 +17,8 @@ import MobileHeader from "@/components/layout/MobileHeader";
 import { useState } from "react";
 import { AuthProvider } from "@/hooks/use-auth";
 import { AgentProvider } from "@/context/AgentContext";
-import { ProtectedRoute } from "@/lib/protected-route";
+import { ProtectedContent } from "@/components/auth/ProtectedContent";
+import { UserRole } from "@shared/schema";
 
 function AppLayout({ children }: { children: React.ReactNode }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -53,25 +54,45 @@ function Router() {
   return (
     <Switch>
       {/* Public Routes */}
-      <Route path="/auth" component={AuthPage} />
-      <Route path="/unauthorized" component={UnauthorizedPage} />
+      <Route path="/auth">
+        <AuthPage />
+      </Route>
+      <Route path="/unauthorized">
+        <UnauthorizedPage />
+      </Route>
       
       {/* Protected Routes - Only logged-in users can access these */}
       <Route path="/">
-        {() => (
+        <ProtectedContent>
           <AppLayout>
             <Switch>
-              <ProtectedRoute path="/" component={Dashboard} />
-              <ProtectedRoute path="/agents" component={AgentsPage} />
-              <ProtectedRoute path="/transactions" component={TransactionsPage} />
-              <ProtectedRoute path="/revenue-share" component={RevenueSharePage} />
-              <ProtectedRoute path="/reports" component={ReportsPage} />
-              <ProtectedRoute path="/settings" component={SettingsPage} />
-              <ProtectedRoute path="/integrations/zapier" component={ZapierSettingsPage} />
-              <Route component={NotFound} />
+              <Route path="/:rest*">
+                {(params) => {
+                  if (params.rest === undefined) {
+                    return <Dashboard />;
+                  }
+                  
+                  switch(params.rest) {
+                    case "agents":
+                      return <AgentsPage />;
+                    case "transactions":
+                      return <TransactionsPage />;
+                    case "revenue-share":
+                      return <RevenueSharePage />;
+                    case "reports":
+                      return <ReportsPage />;
+                    case "settings":
+                      return <SettingsPage />;
+                    case "integrations/zapier":
+                      return <ZapierSettingsPage />;
+                    default:
+                      return <NotFound />;
+                  }
+                }}
+              </Route>
             </Switch>
           </AppLayout>
-        )}
+        </ProtectedContent>
       </Route>
     </Switch>
   );
