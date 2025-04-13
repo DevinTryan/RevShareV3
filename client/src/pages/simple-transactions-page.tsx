@@ -4,7 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2, Plus } from "lucide-react";
+import { Loader2, Plus, Edit } from "lucide-react";
 import { formatCurrency } from "@/utils/formatters";
 
 export default function SimpleTransactionsPage() {
@@ -88,6 +88,7 @@ export default function SimpleTransactionsPage() {
                   <th className="h-12 px-4 text-right font-medium">Sale Amount</th>
                   <th className="h-12 px-4 text-right font-medium">Company GCI</th>
                   <th className="h-12 px-4 text-right font-medium">Agent GCI</th>
+                  <th className="h-12 px-4 text-center font-medium">Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -109,6 +110,20 @@ export default function SimpleTransactionsPage() {
                     <td className="p-4 align-middle text-right">{formatCurrency(transaction.saleAmount)}</td>
                     <td className="p-4 align-middle text-right">{formatCurrency(transaction.companyGCI)}</td>
                     <td className="p-4 align-middle text-right">{formatCurrency(transaction.agentCommissionAmount)}</td>
+                    <td className="p-4 align-middle text-center">
+                      <Button 
+                        size="sm" 
+                        variant="outline"
+                        className="inline-flex items-center gap-1"
+                        onClick={(e) => {
+                          e.stopPropagation(); // Prevent row click
+                          navigate(`/simple-transactions/${transaction.id}`);
+                        }}
+                      >
+                        <Edit className="h-3.5 w-3.5" />
+                        Edit
+                      </Button>
+                    </td>
                   </tr>
                 ))}
               </tbody>

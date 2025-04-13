@@ -8,10 +8,13 @@ import SimpleTransactionForm from "@/components/forms/SimpleTransactionForm";
 export default function SimpleTransactionPage() {
   const [location] = useLocation();
   const isNewTransaction = location === "/simple-transaction/new";
-  // Fix path split to properly handle the format /simple-transactions/123
+  
+  // Extract transaction ID from path
+  // Handle both /simple-transaction/123 and /simple-transactions/123 formats
   const pathParts = location.split("/");
-  const transactionId = !isNewTransaction && pathParts.length > 2 ? 
-    parseInt(pathParts[pathParts.length - 1], 10) : null;
+  const lastPart = pathParts[pathParts.length - 1];
+  const transactionId = !isNewTransaction && !isNaN(parseInt(lastPart, 10)) ? 
+    parseInt(lastPart, 10) : null;
     
   console.log("Transaction page location:", location);
   console.log("Is new transaction:", isNewTransaction);
