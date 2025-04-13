@@ -166,7 +166,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/transactions", async (req: Request, res: Response) => {
+  app.post("/api/transactions", requireAuth, async (req: Request, res: Response) => {
     try {
       console.log("Transaction data received:", JSON.stringify(req.body));
       
@@ -194,7 +194,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  app.put("/api/transactions/:id", async (req: Request, res: Response) => {
+  app.put("/api/transactions/:id", requireAuth, async (req: Request, res: Response) => {
     try {
       const id = parseInt(req.params.id);
       const data = req.body;
@@ -219,7 +219,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  app.delete("/api/transactions/:id", async (req: Request, res: Response) => {
+  app.delete("/api/transactions/:id", requireAuth, async (req: Request, res: Response) => {
     try {
       const id = parseInt(req.params.id);
       const success = await storage.deleteTransaction(id);
@@ -235,7 +235,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // API Routes for Revenue Shares
-  app.get("/api/revenue-shares", async (req: Request, res: Response) => {
+  app.get("/api/revenue-shares", requireAuth, async (req: Request, res: Response) => {
     try {
       const revenueShares = await storage.getRevenueShares();
       res.json(revenueShares);
@@ -244,7 +244,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/transactions/:id/revenue-shares", async (req: Request, res: Response) => {
+  app.get("/api/transactions/:id/revenue-shares", requireAuth, async (req: Request, res: Response) => {
     try {
       const transactionId = parseInt(req.params.id);
       const revenueShares = await storage.getRevenueSharesByTransaction(transactionId);
@@ -267,16 +267,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Webhook Routes for Zapier Integration
   
   // Management endpoints for webhooks
-  app.post("/api/webhooks", registerWebhook);
-  app.get("/api/webhooks", listWebhooks);
-  app.delete("/api/webhooks/:id", deleteWebhook);
+  app.post("/api/webhooks", requireAdmin, registerWebhook);
+  app.get("/api/webhooks", requireAdmin, listWebhooks);
+  app.delete("/api/webhooks/:id", requireAdmin, deleteWebhook);
   
   // Webhook endpoints for Zapier to send data to our app
   app.post("/api/webhooks/zapier/transaction", validateWebhookSignature, processTransactionWebhook);
   app.post("/api/webhooks/zapier/agent", validateWebhookSignature, processAgentWebhook);
   
   // Webhook test endpoint
-  app.post("/api/webhooks/test", handleZapierTest);
+  app.post("/api/webhooks/test", requireAdmin, handleZapierTest);
   
   // Add a hook to trigger webhooks whenever transactions are created
   const originalCreateTransaction = storage.createTransaction;
