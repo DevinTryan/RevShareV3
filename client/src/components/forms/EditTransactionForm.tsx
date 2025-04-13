@@ -392,24 +392,24 @@ const EditTransactionForm = ({ transaction, onClose }: EditTransactionFormProps)
     try {
       const values = form.getValues();
       
-      // Fix company percentage if null or undefined
-      const companyPercentage = values.companyPercentage ?? 15;
-      form.setValue("companyPercentage", companyPercentage);
+      // Ensure we have a valid company percentage (default 15%)
+      const companyPercentage = values.companyPercentage || 15;
       
-      // Calculate commission
+      // Calculate commission based on manual entry or calculation
       const commission = values.manualCommissionEntry ? 
-        values.manualCommissionAmount : 
+        (values.manualCommissionAmount || 0) : 
         (values.saleAmount * values.commissionPercentage) / 100;
       
-      // Calculate companyGCI based on commission and company percentage
+      // Calculate companyGCI based on manual entry or calculation
       const companyGCI = values.manualCompanyGCI ?
-        values.manualCompanyGCIAmount :
+        (values.manualCompanyGCIAmount || 0) :
         (commission * companyPercentage) / 100;
       
+      // Create the update payload with required values
       const updatedValues = {
         ...values,
-        companyGCI,
-        companyPercentage
+        companyGCI: companyGCI || 0, // Ensure it's never null
+        companyPercentage: companyPercentage || 15 // Ensure it's never null
       };
       
       console.log("Submitting with calculated values:", updatedValues);
