@@ -82,9 +82,6 @@ export const transactions = pgTable("transactions", {
   clientEmail: text("client_email"),
   clientPhone: text("client_phone"),
   
-  // Deleted agent info (preserved for record keeping)
-  agentNameArchived: text("agent_name_archived"),
-  
   // Transaction details
   transactionType: text("transaction_type").default("buyer"), // buyer or seller
   transactionStatus: text("transaction_status").default("pending"), // pending, closed, cancelled
@@ -128,6 +125,22 @@ export const transactions = pgTable("transactions", {
   additionalAgentId: integer("additional_agent_id").references(() => agents.id), // additional agent involved
   additionalAgentFee: doublePrecision("additional_agent_fee").default(0), // fee for additional agent
   additionalAgentPercentage: doublePrecision("additional_agent_percentage").default(0), // % for additional agent
+  additionalAgentCost: doublePrecision("additional_agent_cost").default(0), // additional cost for agent
+  
+  // Extended transaction fields
+  source: text("source"), // Source of the transaction
+  companyName: text("company_name"), // Company name
+  escrowOffice: text("escrow_office"), // Escrow office
+  escrowOfficer: text("escrow_officer"), // Escrow officer
+  referrer: text("referrer"), // Referrer
+  lender: text("lender"), // Lender
+  sellerCommissionPercentage: doublePrecision("seller_commission_percentage").default(0), // Seller commission %
+  buyerCommissionPercentage: doublePrecision("buyer_commission_percentage").default(0), // Buyer commission %
+  referralFee: doublePrecision("referral_fee").default(0), // Referral fee
+  showingAgent: text("showing_agent"), // Showing agent name
+  teamAgentsIncome: doublePrecision("team_agents_income").default(0), // Team agents income
+  personalIncome: doublePrecision("personal_income").default(0), // Personal income
+  actualCheckAmount: doublePrecision("actual_check_amount").default(0), // Actual check amount
   
   // Archived fields for deleted agents
   agentNameArchived: text("agent_name_archived"), // Keeps agent name after deletion
@@ -190,7 +203,22 @@ export const insertTransactionSchema = createInsertSchema(transactions)
     referralPercentage: z.number().min(0).max(100).optional(),
     referralAmount: z.number().nonnegative().optional(),
     showingAgentId: z.number().optional(),
-    showingAgentFee: z.number().nonnegative().optional()
+    showingAgentFee: z.number().nonnegative().optional(),
+    // Extended transaction fields
+    additionalAgentCost: z.number().min(0).optional(),
+    source: z.string().optional(),
+    companyName: z.string().optional(),
+    escrowOffice: z.string().optional(),
+    escrowOfficer: z.string().optional(),
+    referrer: z.string().optional(),
+    lender: z.string().optional(),
+    sellerCommissionPercentage: z.number().min(0).optional(),
+    buyerCommissionPercentage: z.number().min(0).optional(),
+    referralFee: z.number().min(0).optional(),
+    showingAgent: z.string().optional(),
+    teamAgentsIncome: z.number().min(0).optional(),
+    personalIncome: z.number().min(0).optional(),
+    actualCheckAmount: z.number().min(0).optional()
   })
   .transform(data => {
     // If companyGCI is not provided, calculate it from saleAmount and commissionPercentage

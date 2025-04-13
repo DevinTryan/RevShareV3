@@ -6,6 +6,16 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Agent, Transaction } from "@shared/schema";
+
+// Extended transaction interface only for additional fields we need
+interface ExtendedTransaction extends Transaction {
+  // This represents grouped agents data that isn't directly in the database schema
+  additionalAgents?: Array<{
+    agentId: number;
+    percentage: number;
+    additionalCost: number;
+  }>;
+}
 import { Button } from "@/components/ui/button";
 import {
   Form,
@@ -70,7 +80,7 @@ const editTransactionSchema = z.object({
 });
 
 interface EditTransactionFormProps {
-  transaction: Transaction;
+  transaction: ExtendedTransaction;
   onClose: () => void;
 }
 
