@@ -1,11 +1,13 @@
 import { and, eq, desc, sql } from 'drizzle-orm';
 import { db } from './db';
 import { 
-  Agent, AgentWithDownline, Transaction, RevenueShare,
-  InsertAgent, InsertTransaction, InsertRevenueShare,
-  agents, transactions, revenueShares
+  Agent, AgentWithDownline, Transaction, RevenueShare, User,
+  InsertAgent, InsertTransaction, InsertRevenueShare, InsertUser,
+  agents, transactions, revenueShares, users
 } from '../shared/schema';
 import { IStorage } from './storage';
+import session from 'express-session';
+import connectPg from 'connect-pg-simple';
 import {
   calculateCommission,
   calculateCompanyGCI,

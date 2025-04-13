@@ -9,12 +9,17 @@ import RevenueSharePage from "@/pages/RevenueSharePage";
 import ReportsPage from "@/pages/ReportsPage";
 import SettingsPage from "@/pages/SettingsPage";
 import ZapierSettingsPage from "@/pages/ZapierSettingsPage";
+import AuthPage from "@/pages/auth-page";
+import UnauthorizedPage from "@/pages/unauthorized-page";
 import NotFound from "@/pages/not-found";
 import Sidebar from "@/components/layout/Sidebar";
 import MobileHeader from "@/components/layout/MobileHeader";
 import { useState } from "react";
+import { AuthProvider } from "@/hooks/use-auth";
+import { AgentProvider } from "@/context/AgentContext";
+import { ProtectedRoute } from "@/lib/protected-route";
 
-function Router() {
+function AppLayout({ children }: { children: React.ReactNode }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const toggleMobileMenu = () => {
@@ -35,16 +40,7 @@ function Router() {
         <MobileHeader toggleMenu={toggleMobileMenu} />
         
         <main className="flex-1 overflow-y-auto p-4 md:p-6 bg-gray-50">
-          <Switch>
-            <Route path="/" component={Dashboard} />
-            <Route path="/agents" component={AgentsPage} />
-            <Route path="/transactions" component={TransactionsPage} />
-            <Route path="/revenue-share" component={RevenueSharePage} />
-            <Route path="/reports" component={ReportsPage} />
-            <Route path="/settings" component={SettingsPage} />
-            <Route path="/integrations/zapier" component={ZapierSettingsPage} />
-            <Route component={NotFound} />
-          </Switch>
+          {children}
         </main>
       </div>
       
@@ -53,10 +49,42 @@ function Router() {
   );
 }
 
+function Router() {
+  return (
+    <Switch>
+      {/* Public Routes */}
+      <Route path="/auth" component={AuthPage} />
+      <Route path="/unauthorized" component={UnauthorizedPage} />
+      
+      {/* Protected Routes - Only logged-in users can access these */}
+      <Route path="/">
+        {() => (
+          <AppLayout>
+            <Switch>
+              <ProtectedRoute path="/" component={Dashboard} />
+              <ProtectedRoute path="/agents" component={AgentsPage} />
+              <ProtectedRoute path="/transactions" component={TransactionsPage} />
+              <ProtectedRoute path="/revenue-share" component={RevenueSharePage} />
+              <ProtectedRoute path="/reports" component={ReportsPage} />
+              <ProtectedRoute path="/settings" component={SettingsPage} />
+              <ProtectedRoute path="/integrations/zapier" component={ZapierSettingsPage} />
+              <Route component={NotFound} />
+            </Switch>
+          </AppLayout>
+        )}
+      </Route>
+    </Switch>
+  );
+}
+
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <Router />
+      <AgentProvider>
+        <AuthProvider>
+          <Router />
+        </AuthProvider>
+      </AgentProvider>
     </QueryClientProvider>
   );
 }
