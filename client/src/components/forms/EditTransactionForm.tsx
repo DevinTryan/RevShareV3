@@ -211,6 +211,8 @@ const EditTransactionForm = ({ transaction, onClose }: EditTransactionFormProps)
   // Handle transaction update
   const updateTransactionMutation = useMutation({
     mutationFn: async (data: z.infer<typeof editTransactionSchema>) => {
+      console.log("Running transaction update mutation with data:", data);
+      
       // Prepare the data based on manual entries or calculations
       const finalCommissionAmount = data.manualCommissionEntry 
         ? data.manualCommissionAmount || 0
@@ -255,12 +257,25 @@ const EditTransactionForm = ({ transaction, onClose }: EditTransactionFormProps)
         actualCheckAmount: data.actualCheckAmount,
       };
       
-      const response = await apiRequest(
-        'PUT', 
-        `/api/transactions/${transaction.id}`, 
-        updateData
-      );
-      return response.json();
+      console.log("Sending API request with data:", updateData);
+      
+      try {
+        const response = await apiRequest(
+          'PUT', 
+          `/api/transactions/${transaction.id}`, 
+          updateData
+        );
+        
+        if (!response.ok) {
+          const errorText = await response.text();
+          throw new Error(`Server error: ${response.status} - ${errorText}`);
+        }
+        
+        return response.json();
+      } catch (error) {
+        console.error("Error updating transaction:", error);
+        throw error;
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/transactions'] });
@@ -308,6 +323,19 @@ const EditTransactionForm = ({ transaction, onClose }: EditTransactionFormProps)
   });
 
   const onSubmit = (data: z.infer<typeof editTransactionSchema>) => {
+    console.log("Form submitted with data:", data);
+    
+    // Add debugging to check for form validation errors
+    if (Object.keys(form.formState.errors).length > 0) {
+      console.error("Form has validation errors:", form.formState.errors);
+      toast({
+        title: "Validation Error",
+        description: "Please check the form for errors",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     updateTransactionMutation.mutate(data);
   };
 
