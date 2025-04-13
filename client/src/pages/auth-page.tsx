@@ -37,11 +37,6 @@ export default function AuthPage() {
   const { agentsList, isLoadingAgents } = useAgentContext();
   const [activeTab, setActiveTab] = useState<string>("login");
 
-  // If already logged in, redirect to home
-  if (user) {
-    return <Redirect to="/" />;
-  }
-
   // Login form
   const loginForm = useForm<LoginFormValues>({
     resolver: zodResolver(loginFormSchema),
@@ -63,6 +58,11 @@ export default function AuthPage() {
       agentId: undefined,
     },
   });
+  
+  // If already logged in, redirect to home
+  if (user) {
+    return <Redirect to="/" />;
+  }
 
   // Handle login form submission
   const onLoginSubmit = (values: LoginFormValues) => {
