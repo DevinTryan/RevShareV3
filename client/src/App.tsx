@@ -5,6 +5,8 @@ import { Toaster } from "@/components/ui/toaster";
 import Dashboard from "@/pages/Dashboard";
 import AgentsPage from "@/pages/AgentsPage";
 import TransactionsPage from "@/pages/TransactionsPage";
+import SimpleTransactionsPage from "@/pages/simple-transactions-page";
+import SimpleTransactionPage from "@/pages/simple-transaction-page";
 import RevenueSharePage from "@/pages/RevenueSharePage";
 import ReportsPage from "@/pages/ReportsPage";
 import SettingsPage from "@/pages/SettingsPage";
@@ -131,6 +133,20 @@ function AppRoutes() {
         <ProtectedRoute>
           <AppLayout>
             <UsersPage />
+          </AppLayout>
+        </ProtectedRoute>
+      </Route>
+      <Route path="/simple-transactions">
+        <ProtectedRoute>
+          <AppLayout>
+            <SimpleTransactionsPage />
+          </AppLayout>
+        </ProtectedRoute>
+      </Route>
+      <Route path="/simple-transaction/new">
+        <ProtectedRoute>
+          <AppLayout>
+            <SimpleTransactionPage />
           </AppLayout>
         </ProtectedRoute>
       </Route>
