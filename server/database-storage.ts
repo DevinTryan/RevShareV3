@@ -175,15 +175,28 @@ export class DatabaseStorage implements IStorage {
 
   // Transaction operations
   async getTransactions(): Promise<Transaction[]> {
-    return await db
-      .select()
-      .from(transactions)
-      .orderBy(desc(transactions.transactionDate));
+    try {
+      const result = await db
+        .select()
+        .from(transactions)
+        .orderBy(desc(transactions.transactionDate));
+      
+      return result;
+    } catch (error) {
+      console.error("Error retrieving transactions:", error);
+      // Return empty array instead of throwing an error
+      return [];
+    }
   }
 
   async getTransaction(id: number): Promise<Transaction | undefined> {
-    const result = await db.select().from(transactions).where(eq(transactions.id, id));
-    return result.length ? result[0] : undefined;
+    try {
+      const result = await db.select().from(transactions).where(eq(transactions.id, id));
+      return result.length ? result[0] : undefined;
+    } catch (error) {
+      console.error("Error retrieving transaction:", error);
+      return undefined;
+    }
   }
 
   async createTransaction(insertTransaction: InsertTransaction): Promise<Transaction> {
@@ -273,11 +286,18 @@ export class DatabaseStorage implements IStorage {
   }
   
   async getAgentTransactions(agentId: number): Promise<Transaction[]> {
-    return await db
-      .select()
-      .from(transactions)
-      .where(eq(transactions.agentId, agentId))
-      .orderBy(desc(transactions.transactionDate));
+    try {
+      const result = await db
+        .select()
+        .from(transactions)
+        .where(eq(transactions.agentId, agentId))
+        .orderBy(desc(transactions.transactionDate));
+      
+      return result;
+    } catch (error) {
+      console.error("Error retrieving agent transactions:", error);
+      return [];
+    }
   }
 
   private async processRevenueShare(transaction: Transaction): Promise<void> {
@@ -405,28 +425,49 @@ export class DatabaseStorage implements IStorage {
 
   // Revenue share operations
   async getRevenueShares(): Promise<RevenueShare[]> {
-    return await db
-      .select()
-      .from(revenueShares)
-      .orderBy(desc(revenueShares.createdAt));
+    try {
+      const result = await db
+        .select()
+        .from(revenueShares)
+        .orderBy(desc(revenueShares.createdAt));
+      
+      return result;
+    } catch (error) {
+      console.error("Error retrieving revenue shares:", error);
+      return [];
+    }
   }
 
   async getRevenueSharesByTransaction(transactionId: number): Promise<RevenueShare[]> {
-    return await db
-      .select()
-      .from(revenueShares)
-      .where(eq(revenueShares.transactionId, transactionId))
-      .orderBy(revenueShares.tier);
+    try {
+      const result = await db
+        .select()
+        .from(revenueShares)
+        .where(eq(revenueShares.transactionId, transactionId))
+        .orderBy(revenueShares.tier);
+      
+      return result;
+    } catch (error) {
+      console.error("Error retrieving transaction revenue shares:", error);
+      return [];
+    }
   }
 
   async getRevenueSharesByAgent(agentId: number): Promise<RevenueShare[]> {
-    return await db
-      .select()
-      .from(revenueShares)
-      .where(
-        sql`${revenueShares.recipientAgentId} = ${agentId} OR ${revenueShares.sourceAgentId} = ${agentId}`
-      )
-      .orderBy(desc(revenueShares.createdAt));
+    try {
+      const result = await db
+        .select()
+        .from(revenueShares)
+        .where(
+          sql`${revenueShares.recipientAgentId} = ${agentId} OR ${revenueShares.sourceAgentId} = ${agentId}`
+        )
+        .orderBy(desc(revenueShares.createdAt));
+      
+      return result;
+    } catch (error) {
+      console.error("Error retrieving agent revenue shares:", error);
+      return [];
+    }
   }
 
   async createRevenueShare(insertRevenueShare: InsertRevenueShare): Promise<RevenueShare> {
@@ -502,59 +543,64 @@ export class DatabaseStorage implements IStorage {
    * Get filtered transactions based on various criteria
    */
   async getFilteredTransactions(filters: any): Promise<Transaction[]> {
-    let query = db.select().from(transactions);
-    
-    // Apply date range filter
-    if (filters.startDate && filters.endDate) {
-      const startDate = new Date(filters.startDate);
-      const endDate = new Date(filters.endDate);
+    try {
+      let query = db.select().from(transactions);
       
-      query = query.where(
-        and(
-          sql`${transactions.transactionDate} >= ${startDate}`,
-          sql`${transactions.transactionDate} <= ${endDate}`
-        )
-      );
+      // Apply date range filter
+      if (filters.startDate && filters.endDate) {
+        const startDate = new Date(filters.startDate);
+        const endDate = new Date(filters.endDate);
+        
+        query = query.where(
+          and(
+            sql`${transactions.transactionDate} >= ${startDate}`,
+            sql`${transactions.transactionDate} <= ${endDate}`
+          )
+        );
+      }
+      
+      // Apply agent filter
+      if (filters.agentId) {
+        query = query.where(eq(transactions.agentId, filters.agentId));
+      }
+      
+      // Apply transaction type filter
+      if (filters.transactionType) {
+        query = query.where(eq(transactions.transactionType, filters.transactionType));
+      }
+      
+      // Apply lead source filter
+      if (filters.leadSource) {
+        query = query.where(eq(transactions.leadSource, filters.leadSource));
+      }
+      
+      // Apply address filter
+      if (filters.address) {
+        query = query.where(sql`${transactions.propertyAddress} ILIKE ${`%${filters.address}%`}`);
+      }
+      
+      // Apply zip code filter
+      if (filters.zipCode) {
+        query = query.where(sql`${transactions.propertyAddress} ILIKE ${`%${filters.zipCode}%`}`);
+      }
+      
+      // Apply sale amount range filters
+      if (filters.minSaleAmount) {
+        query = query.where(sql`${transactions.saleAmount} >= ${filters.minSaleAmount}`);
+      }
+      
+      if (filters.maxSaleAmount) {
+        query = query.where(sql`${transactions.saleAmount} <= ${filters.maxSaleAmount}`);
+      }
+      
+      // Order by transaction date (newest first)
+      query = query.orderBy(desc(transactions.transactionDate));
+      
+      return await query;
+    } catch (error) {
+      console.error("Error retrieving filtered transactions:", error);
+      return [];
     }
-    
-    // Apply agent filter
-    if (filters.agentId) {
-      query = query.where(eq(transactions.agentId, filters.agentId));
-    }
-    
-    // Apply transaction type filter
-    if (filters.transactionType) {
-      query = query.where(eq(transactions.transactionType, filters.transactionType));
-    }
-    
-    // Apply lead source filter
-    if (filters.leadSource) {
-      query = query.where(eq(transactions.leadSource, filters.leadSource));
-    }
-    
-    // Apply address filter
-    if (filters.address) {
-      query = query.where(sql`${transactions.propertyAddress} ILIKE ${`%${filters.address}%`}`);
-    }
-    
-    // Apply zip code filter
-    if (filters.zipCode) {
-      query = query.where(sql`${transactions.propertyAddress} ILIKE ${`%${filters.zipCode}%`}`);
-    }
-    
-    // Apply sale amount range filters
-    if (filters.minSaleAmount) {
-      query = query.where(sql`${transactions.saleAmount} >= ${filters.minSaleAmount}`);
-    }
-    
-    if (filters.maxSaleAmount) {
-      query = query.where(sql`${transactions.saleAmount} <= ${filters.maxSaleAmount}`);
-    }
-    
-    // Order by transaction date (newest first)
-    query = query.orderBy(desc(transactions.transactionDate));
-    
-    return await query;
   }
 
   /**
