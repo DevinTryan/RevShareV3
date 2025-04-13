@@ -8,6 +8,7 @@ import TransactionsPage from "@/pages/TransactionsPage";
 import RevenueSharePage from "@/pages/RevenueSharePage";
 import ReportsPage from "@/pages/ReportsPage";
 import SettingsPage from "@/pages/SettingsPage";
+import ZapierSettingsPage from "@/pages/ZapierSettingsPage";
 import NotFound from "@/pages/not-found";
 import Sidebar from "@/components/layout/Sidebar";
 import MobileHeader from "@/components/layout/MobileHeader";
@@ -35,6 +36,7 @@ function Router() {
             <Route path="/revenue-share" component={RevenueSharePage} />
             <Route path="/reports" component={ReportsPage} />
             <Route path="/settings" component={SettingsPage} />
+            <Route path="/integrations/zapier" component={ZapierSettingsPage} />
             <Route component={NotFound} />
           </Switch>
         </main>

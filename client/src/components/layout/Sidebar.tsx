@@ -16,6 +16,7 @@ const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
     { path: "/revenue-share", label: "Revenue Share", icon: "ri-money-dollar-circle-line" },
     { path: "/reports", label: "Reports", icon: "ri-bar-chart-line" },
     { path: "/settings", label: "Settings", icon: "ri-settings-line" },
+    { path: "/integrations/zapier", label: "Zapier", icon: "ri-link-m" },
   ];
 
   return (
