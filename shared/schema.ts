@@ -76,18 +76,55 @@ export const transactions = pgTable("transactions", {
   companyGCI: doublePrecision("company_gci").notNull().default(0),
   transactionDate: timestamp("transaction_date").notNull(),
   createdAt: timestamp("created_at").defaultNow(),
-  // New fields for commission and lead tracking
+  
+  // Client information
   clientName: text("client_name"),
+  clientEmail: text("client_email"),
+  clientPhone: text("client_phone"),
+  
+  // Transaction details
   transactionType: text("transaction_type").default("buyer"), // buyer or seller
+  transactionStatus: text("transaction_status").default("pending"), // pending, closed, cancelled
+  escrowNumber: text("escrow_number"),
+  closeDate: timestamp("close_date"),
+  
+  // Lead and commission tracking
   leadSource: text("lead_source").$type<LeadSource>(),
   isCompanyProvided: boolean("is_company_provided").default(false),
   isSelfGenerated: boolean("is_self_generated").default(true),
   agentCommissionPercentage: doublePrecision("agent_commission_percentage"), // % commission that goes to agent
   agentCommissionAmount: doublePrecision("agent_commission_amount"), // actual $ amount to agent
+  
+  // Referral details
   referralPercentage: doublePrecision("referral_percentage").default(0), // if referral, what %
   referralAmount: doublePrecision("referral_amount").default(0), // $ paid in referral
+  referralType: text("referral_type"), // type of referral
+  referralAgentName: text("referral_agent_name"), // name of referring agent
+  referralBrokerageName: text("referral_brokerage_name"), // name of referring brokerage
+  
+  // Showing agent details
   showingAgentId: integer("showing_agent_id").references(() => agents.id), // if there was a showing agent
   showingAgentFee: doublePrecision("showing_agent_fee").default(0), // $ paid to showing agent
+  
+  // Additional fees and adjustments
+  officeGrossCommission: doublePrecision("office_gross_commission").default(0), // total commission to the office
+  transactionCoordinatorFee: doublePrecision("transaction_coordinator_fee").default(0), // TC fee
+  complianceFee: doublePrecision("compliance_fee").default(0), // compliance fee amount
+  complianceFeePaidByClient: boolean("compliance_fee_paid_by_client").default(false), // who pays compliance fee
+  
+  // Earnest money/deposit tracking
+  depositAmount: doublePrecision("deposit_amount").default(0), // earnest money amount
+  depositDate: timestamp("deposit_date"), // date deposit received
+  depositPostedDate: timestamp("deposit_posted_date"), // date posted to accounting
+  
+  // Additional commission info and comments
+  commissionSplit: text("commission_split"), // commission split details
+  commissionNotes: text("commission_notes"), // notes about commission
+  
+  // Multi-agent support
+  additionalAgentId: integer("additional_agent_id").references(() => agents.id), // additional agent involved
+  additionalAgentFee: doublePrecision("additional_agent_fee").default(0), // fee for additional agent
+  additionalAgentPercentage: doublePrecision("additional_agent_percentage").default(0), // % for additional agent
 });
 
 // Revenue share table definition

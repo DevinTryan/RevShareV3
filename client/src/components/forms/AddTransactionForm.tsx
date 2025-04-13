@@ -14,6 +14,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
+import { Textarea } from "@/components/ui/textarea";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { 
   calculateCommission, 
   calculateCompanyGCI, 
@@ -31,10 +33,17 @@ const formSchema = z.object({
   agentId: z.number({ required_error: "Agent is required" }),
   propertyAddress: z.string().min(5, { message: "Property address is required" }),
   clientName: z.string().optional(),
+  clientEmail: z.string().email().optional(),
+  clientPhone: z.string().optional(),
   transactionType: z.enum(["buyer", "seller"]).default("buyer"),
   saleAmount: z.number().positive({ message: "Sale amount must be positive" }),
   commissionPercentage: z.number().positive({ message: "Commission percentage must be positive" }),
   transactionDate: z.string(),
+  
+  // Transaction details
+  transactionStatus: z.enum(["pending", "closed", "cancelled"]).default("pending"),
+  escrowNumber: z.string().optional(),
+  closeDate: z.string().optional(),
   
   // Lead source and commission settings
   leadSource: z.enum([
@@ -52,18 +61,40 @@ const formSchema = z.object({
   agentCommissionPercentage: z.number().optional(),
   agentCommissionAmount: z.number().optional(),
   
-  // Compliance fee settings
+  // Additional fees
   complianceFeePaidByClient: z.boolean().default(false),
+  complianceFee: z.number().default(500),
+  transactionCoordinatorFee: z.number().default(0),
+  officeGrossCommission: z.number().optional(),
   
-  // Referrals and showing agents
+  // Referrals
   hasReferral: z.boolean().default(false),
   referralPercentage: z.number().min(0).max(100).default(0),
   referralAmount: z.number().default(0),
+  referralType: z.string().optional(),
+  referralAgentName: z.string().optional(),
+  referralBrokerageName: z.string().optional(),
   
+  // Multiple agents
   hasShowingAgent: z.boolean().default(false),
   showingAgentId: z.number().optional(),
   showingAgentPercentage: z.number().min(0).max(100).default(10),
   showingAgentFee: z.number().default(0),
+  
+  hasAdditionalAgent: z.boolean().default(false),
+  additionalAgentId: z.number().optional(),
+  additionalAgentPercentage: z.number().min(0).max(100).default(0),
+  additionalAgentFee: z.number().default(0),
+  
+  // Deposit/earnest money tracking
+  hasDeposit: z.boolean().default(false),
+  depositAmount: z.number().default(0),
+  depositDate: z.string().optional(),
+  depositPostedDate: z.string().optional(),
+  
+  // Additional information
+  commissionSplit: z.string().optional(),
+  commissionNotes: z.string().optional(),
 });
 
 interface AddTransactionFormProps {
