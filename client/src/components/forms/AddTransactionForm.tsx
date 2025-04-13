@@ -112,14 +112,14 @@ const AddTransactionForm = ({ onTransactionAdded }: AddTransactionFormProps) => 
     
     // Calculate share for each tier
     const maxTiers = 5;
-    const tierRates = {
-      [AgentType.PRINCIPAL]: 0.125, // 12.5% for principal agents
-      [AgentType.SUPPORT]: 0.02     // 2% for support agents
+    const tierRates: Record<string, number> = {
+      'principal': 0.125, // 12.5% for principal agents
+      'support': 0.02     // 2% for support agents
     };
     
     const breakdown = sponsorChain.slice(0, maxTiers).map((agent, index) => {
       const tierLevel = index + 1;
-      const tierRate = tierRates[agent.agentType];
+      const tierRate = tierRates[agent.agentType] || 0;
       const amount = companyGCI * tierRate;
       
       return {
@@ -175,16 +175,14 @@ const AddTransactionForm = ({ onTransactionAdded }: AddTransactionFormProps) => 
 
   const createTransactionMutation = useMutation({
     mutationFn: async (data: z.infer<typeof formSchema>) => {
-      // Convert string date to ISO format
+      // Convert string date to ISO format and exclude fields not needed in database
+      const { manualCommission, totalCommission, ...rest } = data;
+      
       const formattedData = {
-        ...data,
+        ...rest,
         transactionDate: new Date(data.transactionDate).toISOString(),
         companyGCI: isManualCommission ? manualCompanyGCI : companyGci
       };
-      
-      // Remove fields not needed in the database
-      delete formattedData.manualCommission;
-      delete formattedData.totalCommission;
       
       const response = await apiRequest('POST', '/api/transactions', formattedData);
       return response.json();
