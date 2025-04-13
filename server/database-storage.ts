@@ -176,12 +176,33 @@ export class DatabaseStorage implements IStorage {
   // Transaction operations
   async getTransactions(): Promise<Transaction[]> {
     try {
-      const result = await db
-        .select()
-        .from(transactions)
-        .orderBy(desc(transactions.transactionDate));
+      // Use raw SQL to select only columns that exist in the database
+      const sql = `
+        SELECT 
+          id, 
+          agent_id as "agentId", 
+          property_address as "propertyAddress", 
+          sale_amount as "saleAmount", 
+          commission_percentage as "commissionPercentage", 
+          company_gci as "companyGCI", 
+          transaction_date as "transactionDate", 
+          created_at as "createdAt", 
+          client_name as "clientName", 
+          transaction_type as "transactionType", 
+          lead_source as "leadSource", 
+          is_company_provided as "isCompanyProvided", 
+          is_self_generated as "isSelfGenerated", 
+          referral_percentage as "referralPercentage", 
+          referral_amount as "referralAmount", 
+          showing_agent_id as "showingAgentId", 
+          showing_agent_fee as "showingAgentFee", 
+          agent_commission_amount as "agentCommissionAmount"
+        FROM transactions
+        ORDER BY transaction_date DESC
+      `;
       
-      return result;
+      const result = await db.execute(sql);
+      return result as Transaction[];
     } catch (error) {
       console.error("Error retrieving transactions:", error);
       // Return empty array instead of throwing an error
@@ -191,8 +212,33 @@ export class DatabaseStorage implements IStorage {
 
   async getTransaction(id: number): Promise<Transaction | undefined> {
     try {
-      const result = await db.select().from(transactions).where(eq(transactions.id, id));
-      return result.length ? result[0] : undefined;
+      // Use raw SQL to select only columns that exist in the database
+      const sql = `
+        SELECT 
+          id, 
+          agent_id as "agentId", 
+          property_address as "propertyAddress", 
+          sale_amount as "saleAmount", 
+          commission_percentage as "commissionPercentage", 
+          company_gci as "companyGCI", 
+          transaction_date as "transactionDate", 
+          created_at as "createdAt", 
+          client_name as "clientName", 
+          transaction_type as "transactionType", 
+          lead_source as "leadSource", 
+          is_company_provided as "isCompanyProvided", 
+          is_self_generated as "isSelfGenerated", 
+          referral_percentage as "referralPercentage", 
+          referral_amount as "referralAmount", 
+          showing_agent_id as "showingAgentId", 
+          showing_agent_fee as "showingAgentFee", 
+          agent_commission_amount as "agentCommissionAmount"
+        FROM transactions
+        WHERE id = $1
+      `;
+      
+      const result = await db.execute(sql, [id]);
+      return result.length ? result[0] as Transaction : undefined;
     } catch (error) {
       console.error("Error retrieving transaction:", error);
       return undefined;
@@ -203,54 +249,48 @@ export class DatabaseStorage implements IStorage {
     try {
       console.log("Creating transaction:", JSON.stringify(insertTransaction));
       
-      // Extract only the fields that exist in the database
-      const {
-        agentId,
-        propertyAddress,
-        saleAmount,
-        commissionPercentage,
-        companyGCI,
-        transactionDate,
-        transactionType,
-        leadSource,
-        isCompanyProvided,
-        isSelfGenerated,
-        referralPercentage,
-        referralAmount,
-        showingAgentId,
-        showingAgentFee,
-        agentCommissionPercentage,
-        agentCommissionAmount,
-        clientName
-      } = insertTransaction;
+      // Define a raw SQL query instead of using the ORM
+      const sql = `
+        INSERT INTO transactions (
+          agent_id, property_address, sale_amount, commission_percentage, 
+          company_gci, transaction_date, transaction_type, lead_source,
+          is_company_provided, is_self_generated, referral_percentage, 
+          referral_amount, showing_agent_id, showing_agent_fee, 
+          agent_commission_amount, client_name
+        ) VALUES (
+          $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16
+        ) RETURNING *
+      `;
       
-      // Create an object with only the existing fields
-      const transactionToInsert = {
-        agentId,
-        propertyAddress,
-        saleAmount,
-        commissionPercentage,
-        companyGCI,
-        transactionDate: new Date(transactionDate),
-        transactionType,
-        leadSource,
-        isCompanyProvided,
-        isSelfGenerated,
-        referralPercentage,
-        referralAmount,
-        showingAgentId,
-        showingAgentFee,
-        agentCommissionPercentage,
-        agentCommissionAmount,
-        clientName
-      };
+      const values = [
+        insertTransaction.agentId, 
+        insertTransaction.propertyAddress,
+        insertTransaction.saleAmount,
+        insertTransaction.commissionPercentage,
+        insertTransaction.companyGCI,
+        new Date(insertTransaction.transactionDate),
+        insertTransaction.transactionType || 'buyer',
+        insertTransaction.leadSource || 'self_generated',
+        insertTransaction.isCompanyProvided || false,
+        insertTransaction.isSelfGenerated || true,
+        insertTransaction.referralPercentage || 0,
+        insertTransaction.referralAmount || 0,
+        insertTransaction.showingAgentId || null,
+        insertTransaction.showingAgentFee || 0,
+        insertTransaction.agentCommissionAmount || 0,
+        insertTransaction.clientName || null
+      ];
       
-      console.log("Sanitized transaction to insert:", JSON.stringify(transactionToInsert));
+      console.log("Executing raw SQL with values:", values);
       
-      // Insert into database
-      const result = await db.insert(transactions).values(transactionToInsert).returning();
+      // Execute the query
+      const result = await db.execute(sql, values);
+      
+      if (!result || result.length === 0) {
+        throw new Error("Failed to create transaction: No result returned");
+      }
+      
       const transaction = result[0];
-      
       console.log("Transaction created successfully:", JSON.stringify(transaction));
       
       // Process revenue shares for this transaction
@@ -276,31 +316,75 @@ export class DatabaseStorage implements IStorage {
       const allowedFields = [
         'agentId', 'propertyAddress', 'saleAmount', 'commissionPercentage', 
         'companyGCI', 'transactionDate', 'transactionType', 'leadSource',
-        'isCompanyProvided', 'isSelfGenerated', 'agentCommissionPercentage',
-        'agentCommissionAmount', 'clientName', 'referralPercentage', 'referralAmount',
+        'isCompanyProvided', 'isSelfGenerated', 'agentCommissionAmount', 
+        'clientName', 'referralPercentage', 'referralAmount',
         'showingAgentId', 'showingAgentFee'
       ];
       
-      let filteredUpdate: any = {};
-      Object.keys(transactionUpdate).forEach(key => {
-        if (allowedFields.includes(key)) {
-          filteredUpdate[key] = transactionUpdate[key as keyof typeof transactionUpdate];
-        }
-      });
+      // Convert camelCase fields to snake_case for SQL and collect values
+      const updateParts = [];
+      const values = [];
+      let paramCounter = 1;
       
-      // Format date if provided
-      if (filteredUpdate.transactionDate && typeof filteredUpdate.transactionDate === 'string') {
-        filteredUpdate.transactionDate = new Date(filteredUpdate.transactionDate);
+      for (const key in transactionUpdate) {
+        if (allowedFields.includes(key)) {
+          let value = transactionUpdate[key as keyof typeof transactionUpdate];
+          
+          // Handle date conversion
+          if (key === 'transactionDate' && typeof value === 'string') {
+            value = new Date(value);
+          }
+          
+          // Convert camelCase to snake_case
+          const snakeKey = key.replace(/[A-Z]/g, letter => `_${letter.toLowerCase()}`);
+          
+          updateParts.push(`${snakeKey} = $${paramCounter++}`);
+          values.push(value);
+        }
       }
       
-      console.log("Updating transaction with filtered values:", JSON.stringify(filteredUpdate));
+      if (updateParts.length === 0) {
+        console.log("No valid fields to update");
+        return existingTransaction;
+      }
       
-      // Update transaction in database
-      const [updatedTransaction] = await db
-        .update(transactions)
-        .set(filteredUpdate)
-        .where(eq(transactions.id, id))
-        .returning();
+      // Add transaction ID as last parameter
+      values.push(id);
+      
+      const sql = `
+        UPDATE transactions
+        SET ${updateParts.join(', ')}
+        WHERE id = $${paramCounter}
+        RETURNING 
+          id, 
+          agent_id as "agentId", 
+          property_address as "propertyAddress", 
+          sale_amount as "saleAmount", 
+          commission_percentage as "commissionPercentage", 
+          company_gci as "companyGCI", 
+          transaction_date as "transactionDate", 
+          created_at as "createdAt", 
+          client_name as "clientName", 
+          transaction_type as "transactionType", 
+          lead_source as "leadSource", 
+          is_company_provided as "isCompanyProvided", 
+          is_self_generated as "isSelfGenerated", 
+          referral_percentage as "referralPercentage", 
+          referral_amount as "referralAmount", 
+          showing_agent_id as "showingAgentId", 
+          showing_agent_fee as "showingAgentFee", 
+          agent_commission_amount as "agentCommissionAmount"
+      `;
+      
+      console.log("Executing update SQL:", sql, values);
+      
+      const result = await db.execute(sql, values);
+      
+      if (!result || result.length === 0) {
+        throw new Error("Failed to update transaction: No result returned");
+      }
+      
+      const updatedTransaction = result[0] as Transaction;
       
       // If companyGCI has changed, update revenue shares
       if (oldCompanyGCI !== updatedTransaction.companyGCI) {
@@ -342,13 +426,34 @@ export class DatabaseStorage implements IStorage {
   
   async getAgentTransactions(agentId: number): Promise<Transaction[]> {
     try {
-      const result = await db
-        .select()
-        .from(transactions)
-        .where(eq(transactions.agentId, agentId))
-        .orderBy(desc(transactions.transactionDate));
+      // Use raw SQL to select only columns that exist in the database
+      const sql = `
+        SELECT 
+          id, 
+          agent_id as "agentId", 
+          property_address as "propertyAddress", 
+          sale_amount as "saleAmount", 
+          commission_percentage as "commissionPercentage", 
+          company_gci as "companyGCI", 
+          transaction_date as "transactionDate", 
+          created_at as "createdAt", 
+          client_name as "clientName", 
+          transaction_type as "transactionType", 
+          lead_source as "leadSource", 
+          is_company_provided as "isCompanyProvided", 
+          is_self_generated as "isSelfGenerated", 
+          referral_percentage as "referralPercentage", 
+          referral_amount as "referralAmount", 
+          showing_agent_id as "showingAgentId", 
+          showing_agent_fee as "showingAgentFee", 
+          agent_commission_amount as "agentCommissionAmount"
+        FROM transactions
+        WHERE agent_id = $1
+        ORDER BY transaction_date DESC
+      `;
       
-      return result;
+      const result = await db.execute(sql, [agentId]);
+      return result as Transaction[];
     } catch (error) {
       console.error("Error retrieving agent transactions:", error);
       return [];
@@ -599,59 +704,97 @@ export class DatabaseStorage implements IStorage {
    */
   async getFilteredTransactions(filters: any): Promise<Transaction[]> {
     try {
-      let query = db.select().from(transactions);
+      // Build the WHERE clause conditions
+      const conditions = [];
+      const params: any[] = [];
+      let paramCounter = 1;
       
       // Apply date range filter
       if (filters.startDate && filters.endDate) {
         const startDate = new Date(filters.startDate);
         const endDate = new Date(filters.endDate);
         
-        query = query.where(
-          and(
-            sql`${transactions.transactionDate} >= ${startDate}`,
-            sql`${transactions.transactionDate} <= ${endDate}`
-          )
-        );
+        conditions.push(`transaction_date >= $${paramCounter++}`);
+        conditions.push(`transaction_date <= $${paramCounter++}`);
+        params.push(startDate, endDate);
       }
       
       // Apply agent filter
       if (filters.agentId) {
-        query = query.where(eq(transactions.agentId, filters.agentId));
+        conditions.push(`agent_id = $${paramCounter++}`);
+        params.push(filters.agentId);
       }
       
       // Apply transaction type filter
       if (filters.transactionType) {
-        query = query.where(eq(transactions.transactionType, filters.transactionType));
+        conditions.push(`transaction_type = $${paramCounter++}`);
+        params.push(filters.transactionType);
       }
       
       // Apply lead source filter
       if (filters.leadSource) {
-        query = query.where(eq(transactions.leadSource, filters.leadSource));
+        conditions.push(`lead_source = $${paramCounter++}`);
+        params.push(filters.leadSource);
       }
       
       // Apply address filter
       if (filters.address) {
-        query = query.where(sql`${transactions.propertyAddress} ILIKE ${`%${filters.address}%`}`);
+        conditions.push(`property_address ILIKE $${paramCounter++}`);
+        params.push(`%${filters.address}%`);
       }
       
       // Apply zip code filter
       if (filters.zipCode) {
-        query = query.where(sql`${transactions.propertyAddress} ILIKE ${`%${filters.zipCode}%`}`);
+        conditions.push(`property_address ILIKE $${paramCounter++}`);
+        params.push(`%${filters.zipCode}%`);
       }
       
       // Apply sale amount range filters
       if (filters.minSaleAmount) {
-        query = query.where(sql`${transactions.saleAmount} >= ${filters.minSaleAmount}`);
+        conditions.push(`sale_amount >= $${paramCounter++}`);
+        params.push(filters.minSaleAmount);
       }
       
       if (filters.maxSaleAmount) {
-        query = query.where(sql`${transactions.saleAmount} <= ${filters.maxSaleAmount}`);
+        conditions.push(`sale_amount <= $${paramCounter++}`);
+        params.push(filters.maxSaleAmount);
       }
       
-      // Order by transaction date (newest first)
-      query = query.orderBy(desc(transactions.transactionDate));
+      // Construct the WHERE clause
+      const whereClause = conditions.length > 0 
+        ? `WHERE ${conditions.join(' AND ')}` 
+        : '';
       
-      return await query;
+      // Use raw SQL to select only columns that exist in the database
+      const sql = `
+        SELECT 
+          id, 
+          agent_id as "agentId", 
+          property_address as "propertyAddress", 
+          sale_amount as "saleAmount", 
+          commission_percentage as "commissionPercentage", 
+          company_gci as "companyGCI", 
+          transaction_date as "transactionDate", 
+          created_at as "createdAt", 
+          client_name as "clientName", 
+          transaction_type as "transactionType", 
+          lead_source as "leadSource", 
+          is_company_provided as "isCompanyProvided", 
+          is_self_generated as "isSelfGenerated", 
+          referral_percentage as "referralPercentage", 
+          referral_amount as "referralAmount", 
+          showing_agent_id as "showingAgentId", 
+          showing_agent_fee as "showingAgentFee", 
+          agent_commission_amount as "agentCommissionAmount"
+        FROM transactions
+        ${whereClause}
+        ORDER BY transaction_date DESC
+      `;
+      
+      console.log("Executing filtered transactions query:", sql, params);
+      
+      const result = await db.execute(sql, params);
+      return result as Transaction[];
     } catch (error) {
       console.error("Error retrieving filtered transactions:", error);
       return [];
