@@ -5,7 +5,9 @@ import {
   insertAgentSchema, 
   insertTransactionSchema,
   AgentType,
-  CapType
+  CapType,
+  UserRole,
+  User
 } from "@shared/schema";
 import { z } from "zod";
 import { ZodError } from "zod";
@@ -20,8 +22,11 @@ import {
   handleZapierTest,
   triggerWebhooks 
 } from "./webhooks";
+import { setupAuth } from "./auth";
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Set up authentication
+  setupAuth(app);
   // API Routes for Agents
   app.get("/api/agents", async (req: Request, res: Response) => {
     try {

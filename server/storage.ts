@@ -2,10 +2,15 @@ import {
   Agent, InsertAgent, AgentType, CapType,
   Transaction, InsertTransaction,
   RevenueShare, InsertRevenueShare,
-  AgentWithDownline
+  AgentWithDownline,
+  User, InsertUser
 } from "@shared/schema";
+import session from "express-session";
 
 export interface IStorage {
+  // Session store for authentication
+  sessionStore: session.Store;
+  
   // Agent operations
   getAgents(): Promise<Agent[]>;
   getAgent(id: number): Promise<Agent | undefined>;
@@ -29,23 +34,44 @@ export interface IStorage {
   getRevenueSharesByTransaction(transactionId: number): Promise<RevenueShare[]>;
   getRevenueSharesByAgent(agentId: number): Promise<RevenueShare[]>;
   createRevenueShare(revenueShare: InsertRevenueShare): Promise<RevenueShare>;
+  
+  // User operations
+  getUser(id: number): Promise<User | undefined>;
+  getUserByUsername(username: string): Promise<User | undefined>;
+  createUser(user: InsertUser): Promise<User>;
+  updateUser(id: number, user: Partial<User>): Promise<User | undefined>;
+  deleteUser(id: number): Promise<boolean>;
+  getUserByEmail(email: string): Promise<User | undefined>;
+  getUserByResetToken(token: string): Promise<User | undefined>;
+  getAgentUser(agentId: number): Promise<User | undefined>;
 }
 
 export class MemStorage implements IStorage {
   private agents: Map<number, Agent>;
   private transactions: Map<number, Transaction>;
   private revenueShares: Map<number, RevenueShare>;
+  private users: Map<number, User>;
   private agentIdCounter: number;
   private transactionIdCounter: number;
   private revenueShareIdCounter: number;
+  private userIdCounter: number;
+  public sessionStore: session.Store;
 
   constructor() {
     this.agents = new Map();
     this.transactions = new Map();
     this.revenueShares = new Map();
+    this.users = new Map();
     this.agentIdCounter = 1;
     this.transactionIdCounter = 1;
     this.revenueShareIdCounter = 1;
+    this.userIdCounter = 1;
+    
+    // Create memory store for session
+    const MemoryStore = require('memorystore')(session);
+    this.sessionStore = new MemoryStore({
+      checkPeriod: 86400000 // prune expired entries every 24h
+    });
   }
 
   // Agent operations
@@ -358,6 +384,61 @@ export class MemStorage implements IStorage {
     
     this.revenueShares.set(id, revenueShare);
     return revenueShare;
+  }
+
+  // User operations
+  async getUser(id: number): Promise<User | undefined> {
+    return this.users.get(id);
+  }
+
+  async getUserByUsername(username: string): Promise<User | undefined> {
+    const users = Array.from(this.users.values());
+    return users.find(user => user.username === username);
+  }
+
+  async createUser(insertUser: InsertUser): Promise<User> {
+    const id = this.userIdCounter++;
+    const now = new Date();
+    
+    const user: User = {
+      id,
+      ...insertUser,
+      createdAt: now,
+      lastLogin: null,
+      resetToken: null,
+      resetTokenExpiry: null
+    };
+    
+    this.users.set(id, user);
+    return user;
+  }
+
+  async updateUser(id: number, userUpdate: Partial<User>): Promise<User | undefined> {
+    const user = this.users.get(id);
+    if (!user) return undefined;
+    
+    const updatedUser = { ...user, ...userUpdate };
+    this.users.set(id, updatedUser);
+    return updatedUser;
+  }
+
+  async deleteUser(id: number): Promise<boolean> {
+    return this.users.delete(id);
+  }
+
+  async getUserByEmail(email: string): Promise<User | undefined> {
+    const users = Array.from(this.users.values());
+    return users.find(user => user.email === email);
+  }
+
+  async getUserByResetToken(token: string): Promise<User | undefined> {
+    const users = Array.from(this.users.values());
+    return users.find(user => user.resetToken === token);
+  }
+
+  async getAgentUser(agentId: number): Promise<User | undefined> {
+    const users = Array.from(this.users.values());
+    return users.find(user => user.agentId === agentId);
   }
 }
 
