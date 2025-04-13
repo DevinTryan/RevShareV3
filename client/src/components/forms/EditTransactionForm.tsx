@@ -199,6 +199,7 @@ const EditTransactionForm = ({ transaction, onClose }: EditTransactionFormProps)
   // Calculate primary agent share (after subtracting company GCI and additional agents)
   const totalAdditionalAgentPercentage = additionalAgents.reduce((sum, agent) => sum + agent.percentage, 0);
   const totalAdditionalAgentCosts = additionalAgents.reduce((sum, agent) => sum + agent.additionalCost, 0);
+  const showingAgentFee = form.watch("showingAgentFee") || 0;
   const primaryAgentSharePercentage = 100 - companyPercentage - totalAdditionalAgentPercentage;
   const primaryAgentShare = (effectiveTotalCommission * primaryAgentSharePercentage / 100) - additionalAgentCost - totalAdditionalAgentCosts - showingAgentFee;
 
