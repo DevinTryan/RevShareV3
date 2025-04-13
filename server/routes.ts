@@ -264,6 +264,163 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Reports API Endpoints
+  app.get("/api/reports/transactions", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const {
+        startDate,
+        endDate,
+        agentId,
+        transactionType,
+        leadSource,
+        address,
+        zipCode,
+        minSaleAmount,
+        maxSaleAmount
+      } = req.query;
+
+      // Build the filters
+      const filters: any = {};
+      
+      if (startDate && endDate) {
+        filters.dateRange = {
+          start: new Date(startDate as string),
+          end: new Date(endDate as string)
+        };
+      }
+      
+      if (agentId) {
+        filters.agentId = parseInt(agentId as string);
+      }
+      
+      if (transactionType) {
+        filters.transactionType = transactionType as string;
+      }
+      
+      if (leadSource) {
+        filters.leadSource = leadSource as string;
+      }
+      
+      if (address) {
+        filters.address = address as string;
+      }
+      
+      if (zipCode) {
+        filters.zipCode = zipCode as string;
+      }
+      
+      if (minSaleAmount) {
+        filters.minSaleAmount = parseFloat(minSaleAmount as string);
+      }
+      
+      if (maxSaleAmount) {
+        filters.maxSaleAmount = parseFloat(maxSaleAmount as string);
+      }
+      
+      const transactions = await storage.getFilteredTransactions(filters);
+      res.json(transactions);
+    } catch (error) {
+      console.error("Reports error:", error);
+      res.status(500).json({ message: "Failed to generate transaction report" });
+    }
+  });
+
+  app.get("/api/reports/agent-performance", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const { startDate, endDate, agentId } = req.query;
+      
+      const filters: any = {};
+      
+      if (startDate && endDate) {
+        filters.dateRange = {
+          start: new Date(startDate as string),
+          end: new Date(endDate as string)
+        };
+      }
+      
+      if (agentId) {
+        filters.agentId = parseInt(agentId as string);
+      }
+      
+      const agentPerformance = await storage.getAgentPerformanceReport(filters);
+      res.json(agentPerformance);
+    } catch (error) {
+      console.error("Agent performance report error:", error);
+      res.status(500).json({ message: "Failed to generate agent performance report" });
+    }
+  });
+
+  app.get("/api/reports/lead-source", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const { startDate, endDate, agentId } = req.query;
+      
+      const filters: any = {};
+      
+      if (startDate && endDate) {
+        filters.dateRange = {
+          start: new Date(startDate as string),
+          end: new Date(endDate as string)
+        };
+      }
+      
+      if (agentId) {
+        filters.agentId = parseInt(agentId as string);
+      }
+      
+      const leadSourceReport = await storage.getLeadSourceReport(filters);
+      res.json(leadSourceReport);
+    } catch (error) {
+      console.error("Lead source report error:", error);
+      res.status(500).json({ message: "Failed to generate lead source report" });
+    }
+  });
+
+  app.get("/api/reports/income-distribution", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const { startDate, endDate, agentId } = req.query;
+      
+      const filters: any = {};
+      
+      if (startDate && endDate) {
+        filters.dateRange = {
+          start: new Date(startDate as string),
+          end: new Date(endDate as string)
+        };
+      }
+      
+      if (agentId) {
+        filters.agentId = parseInt(agentId as string);
+      }
+      
+      const incomeReport = await storage.getIncomeDistributionReport(filters);
+      res.json(incomeReport);
+    } catch (error) {
+      console.error("Income distribution report error:", error);
+      res.status(500).json({ message: "Failed to generate income distribution report" });
+    }
+  });
+
+  app.get("/api/reports/zip-code-analysis", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const { startDate, endDate } = req.query;
+      
+      const filters: any = {};
+      
+      if (startDate && endDate) {
+        filters.dateRange = {
+          start: new Date(startDate as string),
+          end: new Date(endDate as string)
+        };
+      }
+      
+      const zipCodeReport = await storage.getZipCodeAnalysisReport(filters);
+      res.json(zipCodeReport);
+    } catch (error) {
+      console.error("Zip code analysis report error:", error);
+      res.status(500).json({ message: "Failed to generate zip code analysis report" });
+    }
+  });
+
   // Webhook Routes for Zapier Integration
   
   // Management endpoints for webhooks
