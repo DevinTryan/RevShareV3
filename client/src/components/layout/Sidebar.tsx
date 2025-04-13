@@ -70,7 +70,7 @@ const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
           </nav>
         </div>
         
-        <div className="p-4 border-t border-gray-200">
+        <div className="p-4 border-t border-gray-200 space-y-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center">
               <div className="h-8 w-8 rounded-full bg-primary-600 flex items-center justify-center text-white font-semibold">
@@ -109,6 +109,27 @@ const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
+          
+          {/* Add admin buttons */}
+          {user?.role === 'admin' && (
+            <button
+              onClick={() => navigate('/admin/users')}
+              className="w-full flex items-center px-3 py-2 text-sm font-medium rounded-md bg-blue-50 text-blue-600 hover:bg-blue-100"
+            >
+              <i className="ri-user-settings-line mr-2"></i> User Management
+            </button>
+          )}
+          
+          {/* Logout button */}
+          <button
+            onClick={() => {
+              logoutMutation.mutate();
+              navigate('/auth');
+            }}
+            className="w-full flex items-center px-3 py-2 text-sm font-medium rounded-md bg-red-50 text-red-600 hover:bg-red-100"
+          >
+            <i className="ri-logout-box-line mr-2"></i> Sign Out
+          </button>
         </div>
       </div>
     </>
