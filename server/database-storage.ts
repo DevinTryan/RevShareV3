@@ -208,59 +208,12 @@ export class DatabaseStorage implements IStorage {
   async getTransaction(id: number): Promise<Transaction | undefined> {
     try {
       // Use raw SQL to select all columns that exist in the database
-      const sql = `
-        SELECT 
-          id, 
-          agent_id as "agentId", 
-          property_address as "propertyAddress", 
-          sale_amount as "saleAmount", 
-          commission_percentage as "commissionPercentage", 
-          company_gci as "companyGCI", 
-          transaction_date as "transactionDate", 
-          created_at as "createdAt", 
-          client_name as "clientName", 
-          transaction_type as "transactionType", 
-          lead_source as "leadSource", 
-          is_company_provided as "isCompanyProvided", 
-          is_self_generated as "isSelfGenerated", 
-          referral_percentage as "referralPercentage", 
-          referral_amount as "referralAmount", 
-          showing_agent_id as "showingAgentId", 
-          showing_agent_fee as "showingAgentFee", 
-          agent_commission_amount as "agentCommissionAmount",
-          source,
-          company_name as "companyName",
-          escrow_office as "escrowOffice",
-          escrow_officer as "escrowOfficer",
-          referrer,
-          lender,
-          seller_commission_percentage as "sellerCommissionPercentage",
-          buyer_commission_percentage as "buyerCommissionPercentage",
-          compliance_fee as "complianceFee",
-          referral_fee as "referralFee",
-          showing_agent as "showingAgent",
-          team_agents_income as "teamAgentsIncome",
-          personal_income as "personalIncome",
-          actual_check_amount as "actualCheckAmount",
-          manual_commission_amount as "manualCommissionAmount",
-          additional_agent_id as "additionalAgentId",
-          additional_agent_fee as "additionalAgentFee",
-          additional_agent_percentage as "additionalAgentPercentage",
-          agent_name_archived as "agentNameArchived",
-          referral_type as "referralType",
-          referral_agent_name as "referralAgentName",
-          referral_brokerage_name as "referralBrokerageName",
-          office_gross_commission as "officeGrossCommission",
-          transaction_coordinator_fee as "transactionCoordinatorFee",
-          compliance_fee_paid_by_client as "complianceFeePaidByClient",
-          deposit_amount as "depositAmount",
-          deposit_date as "depositDate",
-          additional_agent_cost as "additionalAgentCost"
-        FROM transactions
-        WHERE id = $1
-      `;
+      // Use drizzle-orm prepared query instead of raw SQL
+      const result = await db.select()
+        .from(transactions)
+        .where(eq(transactions.id, id))
+        .limit(1);
       
-      const result = await db.execute(sql, [id]) as any[];
       return result.length ? result[0] as Transaction : undefined;
     } catch (error) {
       console.error("Error retrieving transaction:", error);
