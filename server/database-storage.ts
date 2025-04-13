@@ -203,11 +203,49 @@ export class DatabaseStorage implements IStorage {
     try {
       console.log("Creating transaction:", JSON.stringify(insertTransaction));
       
-      // Make sure we have a valid date object
+      // Extract only the fields that exist in the database
+      const {
+        agentId,
+        propertyAddress,
+        saleAmount,
+        commissionPercentage,
+        companyGCI,
+        transactionDate,
+        transactionType,
+        leadSource,
+        isCompanyProvided,
+        isSelfGenerated,
+        referralPercentage,
+        referralAmount,
+        showingAgentId,
+        showingAgentFee,
+        agentCommissionPercentage,
+        agentCommissionAmount,
+        clientName
+      } = insertTransaction;
+      
+      // Create an object with only the existing fields
       const transactionToInsert = {
-        ...insertTransaction,
-        transactionDate: new Date(insertTransaction.transactionDate)
+        agentId,
+        propertyAddress,
+        saleAmount,
+        commissionPercentage,
+        companyGCI,
+        transactionDate: new Date(transactionDate),
+        transactionType,
+        leadSource,
+        isCompanyProvided,
+        isSelfGenerated,
+        referralPercentage,
+        referralAmount,
+        showingAgentId,
+        showingAgentFee,
+        agentCommissionPercentage,
+        agentCommissionAmount,
+        clientName
       };
+      
+      console.log("Sanitized transaction to insert:", JSON.stringify(transactionToInsert));
       
       // Insert into database
       const result = await db.insert(transactions).values(transactionToInsert).returning();
@@ -234,16 +272,33 @@ export class DatabaseStorage implements IStorage {
       // Save old companyGCI for comparison
       const oldCompanyGCI = existingTransaction.companyGCI;
       
+      // Filter update object to only include fields that exist in the database
+      const allowedFields = [
+        'agentId', 'propertyAddress', 'saleAmount', 'commissionPercentage', 
+        'companyGCI', 'transactionDate', 'transactionType', 'leadSource',
+        'isCompanyProvided', 'isSelfGenerated', 'agentCommissionPercentage',
+        'agentCommissionAmount', 'clientName', 'referralPercentage', 'referralAmount',
+        'showingAgentId', 'showingAgentFee'
+      ];
+      
+      let filteredUpdate: any = {};
+      Object.keys(transactionUpdate).forEach(key => {
+        if (allowedFields.includes(key)) {
+          filteredUpdate[key] = transactionUpdate[key as keyof typeof transactionUpdate];
+        }
+      });
+      
       // Format date if provided
-      let updatedValues: any = { ...transactionUpdate };
-      if (updatedValues.transactionDate && typeof updatedValues.transactionDate === 'string') {
-        updatedValues.transactionDate = new Date(updatedValues.transactionDate);
+      if (filteredUpdate.transactionDate && typeof filteredUpdate.transactionDate === 'string') {
+        filteredUpdate.transactionDate = new Date(filteredUpdate.transactionDate);
       }
+      
+      console.log("Updating transaction with filtered values:", JSON.stringify(filteredUpdate));
       
       // Update transaction in database
       const [updatedTransaction] = await db
         .update(transactions)
-        .set(updatedValues)
+        .set(filteredUpdate)
         .where(eq(transactions.id, id))
         .returning();
       
