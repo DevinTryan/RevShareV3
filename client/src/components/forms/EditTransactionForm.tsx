@@ -25,6 +25,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import RevenueShareBreakdown from "@/components/transactions/RevenueShareBreakdown";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
 
 // Schema for additional agents on the transaction
 const additionalAgentSchema = z.object({
@@ -48,6 +49,24 @@ const editTransactionSchema = z.object({
   additionalAgentCost: z.number().min(0).default(0),
   transactionDate: z.string(),
   additionalAgents: z.array(additionalAgentSchema).default([]),
+  
+  // New fields from the list
+  source: z.string().optional(),
+  companyName: z.string().optional(),
+  escrowOffice: z.string().optional(),
+  escrowOfficer: z.string().optional(),
+  referrer: z.string().optional(),
+  lender: z.string().optional(),
+  sellerCommissionPercentage: z.number().min(0).default(0),
+  buyerCommissionPercentage: z.number().min(0).default(0),
+  complianceFee: z.number().min(0).default(0),
+  referralPercentage: z.number().min(0).max(100).default(0),
+  referralFee: z.number().min(0).default(0),
+  showingAgent: z.string().optional(),
+  showingAgentFee: z.number().min(0).default(0),
+  teamAgentsIncome: z.number().min(0).default(0),
+  personalIncome: z.number().min(0).default(0),
+  actualCheckAmount: z.number().min(0).default(0),
 });
 
 interface EditTransactionFormProps {
@@ -60,6 +79,7 @@ const EditTransactionForm = ({ transaction, onClose }: EditTransactionFormProps)
   const [totalCommission, setTotalCommission] = useState(0);
   const [useManualCommission, setUseManualCommission] = useState(false);
   const [useManualCompanyGCI, setUseManualCompanyGCI] = useState(false);
+  const [activeTab, setActiveTab] = useState("basic");
 
   // Load agents for selection
   const { data: agents, isLoading: isLoadingAgents } = useQuery<Agent[]>({
@@ -96,6 +116,24 @@ const EditTransactionForm = ({ transaction, onClose }: EditTransactionFormProps)
         percentage: agent.percentage || 0,
         additionalCost: agent.additionalCost || 0
       })) || [],
+      
+      // New fields
+      source: transaction.source || '',
+      companyName: transaction.companyName || '',
+      escrowOffice: transaction.escrowOffice || '',
+      escrowOfficer: transaction.escrowOfficer || '',
+      referrer: transaction.referrer || '',
+      lender: transaction.lender || '',
+      sellerCommissionPercentage: transaction.sellerCommissionPercentage || 0,
+      buyerCommissionPercentage: transaction.buyerCommissionPercentage || 0,
+      complianceFee: transaction.complianceFee || 0,
+      referralPercentage: transaction.referralPercentage || 0,
+      referralFee: transaction.referralFee || 0,
+      showingAgent: transaction.showingAgent || '',
+      showingAgentFee: transaction.showingAgentFee || 0,
+      teamAgentsIncome: transaction.teamAgentsIncome || 0,
+      personalIncome: transaction.personalIncome || 0,
+      actualCheckAmount: transaction.actualCheckAmount || 0,
     },
   });
 
@@ -115,6 +153,11 @@ const EditTransactionForm = ({ transaction, onClose }: EditTransactionFormProps)
   const manualCompanyGCIAmount = form.watch("manualCompanyGCIAmount") || 0;
   const additionalAgentCost = form.watch("additionalAgentCost") || 0;
   const additionalAgents = form.watch("additionalAgents") || [];
+  const sellerCommissionPercentage = form.watch("sellerCommissionPercentage") || 0;
+  const buyerCommissionPercentage = form.watch("buyerCommissionPercentage") || 0;
+  const complianceFee = form.watch("complianceFee") || 0;
+  const referralPercentage = form.watch("referralPercentage") || 0;
+  const referralFee = form.watch("referralFee") || 0;
 
   // Update UI state based on form values
   useEffect(() => {
@@ -125,15 +168,24 @@ const EditTransactionForm = ({ transaction, onClose }: EditTransactionFormProps)
   // Update calculated values when inputs change
   useEffect(() => {
     if (!manualCommissionEntry) {
-      const newTotalCommission = (saleAmount * commissionPercentage) / 100;
+      const totalCommissionPercentage = sellerCommissionPercentage + buyerCommissionPercentage || commissionPercentage;
+      const newTotalCommission = (saleAmount * totalCommissionPercentage) / 100;
       setTotalCommission(newTotalCommission);
       form.setValue("totalCommissionAmount", newTotalCommission);
       form.setValue("manualCommissionAmount", newTotalCommission);
+      form.setValue("commissionPercentage", totalCommissionPercentage);
     } else {
       setTotalCommission(manualCommissionAmount);
       form.setValue("totalCommissionAmount", manualCommissionAmount);
     }
-  }, [saleAmount, commissionPercentage, form, manualCommissionEntry, manualCommissionAmount]);
+    
+    // Update referral fee based on percentage if not manually set
+    if (referralPercentage > 0 && referralFee === 0) {
+      const newReferralFee = (totalCommission * referralPercentage) / 100;
+      form.setValue("referralFee", newReferralFee);
+    }
+  }, [saleAmount, commissionPercentage, form, manualCommissionEntry, manualCommissionAmount, 
+      sellerCommissionPercentage, buyerCommissionPercentage, referralPercentage, referralFee, totalCommission]);
 
   // Calculate amount distribution
   const effectiveTotalCommission = useManualCommission ? manualCommissionAmount : totalCommission;
@@ -141,11 +193,14 @@ const EditTransactionForm = ({ transaction, onClose }: EditTransactionFormProps)
     ? manualCompanyGCIAmount 
     : (effectiveTotalCommission * companyPercentage) / 100;
   
+  // Calculate total income after referral
+  const totalIncomeAfterReferral = effectiveTotalCommission - referralFee - complianceFee;
+  
   // Calculate primary agent share (after subtracting company GCI and additional agents)
   const totalAdditionalAgentPercentage = additionalAgents.reduce((sum, agent) => sum + agent.percentage, 0);
   const totalAdditionalAgentCosts = additionalAgents.reduce((sum, agent) => sum + agent.additionalCost, 0);
   const primaryAgentSharePercentage = 100 - companyPercentage - totalAdditionalAgentPercentage;
-  const primaryAgentShare = (effectiveTotalCommission * primaryAgentSharePercentage / 100) - additionalAgentCost - totalAdditionalAgentCosts;
+  const primaryAgentShare = (effectiveTotalCommission * primaryAgentSharePercentage / 100) - additionalAgentCost - totalAdditionalAgentCosts - showingAgentFee;
 
   // Add a new additional agent
   const handleAddAdditionalAgent = () => {
@@ -157,11 +212,11 @@ const EditTransactionForm = ({ transaction, onClose }: EditTransactionFormProps)
     mutationFn: async (data: z.infer<typeof editTransactionSchema>) => {
       // Prepare the data based on manual entries or calculations
       const finalCommissionAmount = data.manualCommissionEntry 
-        ? data.manualCommissionAmount 
+        ? data.manualCommissionAmount || 0
         : (data.saleAmount * data.commissionPercentage) / 100;
       
       const finalCompanyGCI = data.manualCompanyGCI 
-        ? data.manualCompanyGCIAmount 
+        ? data.manualCompanyGCIAmount || 0
         : (finalCommissionAmount * data.companyPercentage) / 100;
       
       // Format the data for API
@@ -179,6 +234,24 @@ const EditTransactionForm = ({ transaction, onClose }: EditTransactionFormProps)
           percentage: agent.percentage,
           additionalCost: agent.additionalCost
         })),
+        
+        // Additional fields
+        source: data.source,
+        companyName: data.companyName,
+        escrowOffice: data.escrowOffice,
+        escrowOfficer: data.escrowOfficer,
+        referrer: data.referrer,
+        lender: data.lender,
+        sellerCommissionPercentage: data.sellerCommissionPercentage,
+        buyerCommissionPercentage: data.buyerCommissionPercentage,
+        complianceFee: data.complianceFee,
+        referralPercentage: data.referralPercentage,
+        referralFee: data.referralFee,
+        showingAgent: data.showingAgent,
+        showingAgentFee: data.showingAgentFee,
+        teamAgentsIncome: data.teamAgentsIncome,
+        personalIncome: data.personalIncome,
+        actualCheckAmount: data.actualCheckAmount,
       };
       
       const response = await apiRequest(
@@ -248,48 +321,74 @@ const EditTransactionForm = ({ transaction, onClose }: EditTransactionFormProps)
     return agents?.find(a => a.id === agentId)?.name || "Unknown";
   };
 
+  // Calculate transaction date parts (Month, Quarter, Year)
+  const transactionDate = new Date(transaction.transactionDate);
+  const month = transactionDate.toLocaleString('default', { month: 'long' });
+  const quarter = `Q${Math.floor(transactionDate.getMonth() / 3) + 1}`;
+  const year = transactionDate.getFullYear();
+
   return (
     <div className="bg-white rounded-lg">
       <div className="p-4">
-        <Tabs defaultValue="edit" className="w-full">
-          <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="edit">Basic Info</TabsTrigger>
-            <TabsTrigger value="commission">Commission</TabsTrigger>
-            <TabsTrigger value="revenue-share">Revenue Share</TabsTrigger>
-          </TabsList>
-          
-          {/* Basic Transaction Information */}
-          <TabsContent value="edit">
-            <Form {...form}>
-              <form className="space-y-4">
-                <FormField
-                  control={form.control}
-                  name="primaryAgentId"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Primary Agent</FormLabel>
-                      <Select
-                        onValueChange={(value) => field.onChange(parseInt(value))}
-                        defaultValue={field.value.toString()}
-                        disabled={isLoadingAgents}
-                      >
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)}>
+            <Tabs defaultValue="basic" value={activeTab} onValueChange={setActiveTab} className="w-full">
+              <TabsList className="grid w-full grid-cols-4">
+                <TabsTrigger value="basic">Basic Info</TabsTrigger>
+                <TabsTrigger value="commission">Commission</TabsTrigger>
+                <TabsTrigger value="additional">Additional Info</TabsTrigger>
+                <TabsTrigger value="revenue-share">Revenue Share</TabsTrigger>
+              </TabsList>
+              
+              {/* Basic Transaction Information */}
+              <TabsContent value="basic" className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="primaryAgentId"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Primary Agent</FormLabel>
+                        <Select
+                          onValueChange={(value) => field.onChange(parseInt(value))}
+                          defaultValue={field.value.toString()}
+                          disabled={isLoadingAgents}
+                        >
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select agent" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {agents?.map((agent) => (
+                              <SelectItem key={agent.id} value={agent.id.toString()}>
+                                {agent.name} ({agent.agentType === 'principal' ? 'Principal' : 'Support'})
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="transactionDate"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Transaction Date</FormLabel>
                         <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select agent" />
-                          </SelectTrigger>
+                          <Input type="date" {...field} />
                         </FormControl>
-                        <SelectContent>
-                          {agents?.map((agent) => (
-                            <SelectItem key={agent.id} value={agent.id.toString()}>
-                              {agent.name} ({agent.agentType === 'principal' ? 'Principal' : 'Support'})
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                        <FormDescription>
+                          {month} {year} ({quarter})
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
 
                 <FormField
                   control={form.control}
@@ -331,7 +430,51 @@ const EditTransactionForm = ({ transaction, onClose }: EditTransactionFormProps)
                     name="commissionPercentage"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Commission Percentage (%)</FormLabel>
+                        <FormLabel>Total Commission Percentage (%)</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="number"
+                            step="0.1"
+                            min="0"
+                            onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                            value={field.value}
+                            disabled={useManualCommission || (sellerCommissionPercentage > 0 || buyerCommissionPercentage > 0)}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="sellerCommissionPercentage"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Seller Commission Percentage (%)</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="number"
+                            step="0.1"
+                            min="0"
+                            onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                            value={field.value}
+                            disabled={useManualCommission}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="buyerCommissionPercentage"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Buyer Commission Percentage (%)</FormLabel>
                         <FormControl>
                           <Input
                             type="number"
@@ -348,45 +491,18 @@ const EditTransactionForm = ({ transaction, onClose }: EditTransactionFormProps)
                   />
                 </div>
 
-                <FormField
-                  control={form.control}
-                  name="transactionDate"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Transaction Date</FormLabel>
-                      <FormControl>
-                        <Input type="date" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
                 <div className="flex justify-end space-x-2 pt-4">
                   <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => form.reset()}
-                    disabled={updateTransactionMutation.isPending}
+                    type="button" 
+                    onClick={() => setActiveTab("commission")}
                   >
-                    Reset
-                  </Button>
-                  <Button
-                    type="button"
-                    onClick={form.handleSubmit(onSubmit)}
-                    disabled={updateTransactionMutation.isPending}
-                  >
-                    {updateTransactionMutation.isPending ? "Saving..." : "Save Changes"}
+                    Next: Commission Details
                   </Button>
                 </div>
-              </form>
-            </Form>
-          </TabsContent>
-          
-          {/* Commission Settings */}
-          <TabsContent value="commission">
-            <Form {...form}>
-              <form className="space-y-4">
+              </TabsContent>
+              
+              {/* Commission Settings */}
+              <TabsContent value="commission" className="space-y-4">
                 <div className="border rounded-md p-4 space-y-4">
                   <h3 className="text-lg font-medium">Commission Settings</h3>
                   
@@ -435,6 +551,93 @@ const EditTransactionForm = ({ transaction, onClose }: EditTransactionFormProps)
                     />
                   )}
                   
+                  {/* Fees Section */}
+                  <h4 className="text-md font-medium mt-6">Fees & Referrals</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="complianceFee"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Compliance Fee ($)</FormLabel>
+                          <FormControl>
+                            <Input
+                              type="number"
+                              step="0.01"
+                              min="0"
+                              onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                              value={field.value}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <FormField
+                      control={form.control}
+                      name="referralPercentage"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Referral Percentage (%)</FormLabel>
+                          <FormControl>
+                            <Input
+                              type="number"
+                              step="0.1"
+                              min="0"
+                              max="100"
+                              onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                              value={field.value}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="referralFee"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Referral Fee (${(totalCommission * referralPercentage / 100).toFixed(2)})</FormLabel>
+                          <FormControl>
+                            <Input
+                              type="number"
+                              step="0.01"
+                              min="0"
+                              onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                              value={field.value}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <FormField
+                      control={form.control}
+                      name="showingAgentFee"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Showing Agent Fee ($)</FormLabel>
+                          <FormControl>
+                            <Input
+                              type="number"
+                              step="0.01"
+                              min="0"
+                              onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                              value={field.value}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                  
                   {/* Commission Summary */}
                   <div className="bg-gray-50 rounded-lg p-4 my-4">
                     <div className="flex justify-between items-center mb-2">
@@ -445,6 +648,17 @@ const EditTransactionForm = ({ transaction, onClose }: EditTransactionFormProps)
                       {useManualCommission 
                         ? "Manually entered amount" 
                         : `${commissionPercentage}% of $${saleAmount.toLocaleString()}`}
+                    </div>
+                    <Separator className="my-2" />
+                    <div className="grid grid-cols-2 gap-1 text-xs">
+                      <div>Compliance Fee:</div>
+                      <div className="text-right">-${complianceFee.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+                      
+                      <div>Referral Fee ({referralPercentage}%):</div>
+                      <div className="text-right">-${referralFee.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+                      
+                      <div className="font-medium">Net Income After Fees:</div>
+                      <div className="text-right font-medium">${totalIncomeAfterReferral.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
                     </div>
                   </div>
                   
@@ -512,6 +726,70 @@ const EditTransactionForm = ({ transaction, onClose }: EditTransactionFormProps)
                       )}
                     />
                   )}
+                  
+                  {/* Income Fields */}
+                  <h4 className="text-md font-medium mt-6">Income Distribution</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="teamAgentsIncome"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Team Agents Income ($)</FormLabel>
+                          <FormControl>
+                            <Input
+                              type="number"
+                              step="0.01"
+                              min="0"
+                              onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                              value={field.value}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <FormField
+                      control={form.control}
+                      name="personalIncome"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Personal Income ($)</FormLabel>
+                          <FormControl>
+                            <Input
+                              type="number"
+                              step="0.01"
+                              min="0"
+                              onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                              value={field.value}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                  
+                  <FormField
+                    control={form.control}
+                    name="actualCheckAmount"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Actual Check Amount Received ($)</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                            value={field.value}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
                   
                   {/* Commission Distribution Visual */}
                   <div className="bg-gray-50 rounded-lg p-4 my-4">
@@ -689,46 +967,195 @@ const EditTransactionForm = ({ transaction, onClose }: EditTransactionFormProps)
                 <div className="flex justify-between pt-4">
                   <Button
                     type="button"
-                    variant="destructive"
-                    onClick={handleDelete}
-                    disabled={updateTransactionMutation.isPending || deleteTransactionMutation.isPending}
+                    variant="outline"
+                    onClick={() => setActiveTab("basic")}
                   >
-                    {deleteTransactionMutation.isPending ? "Deleting..." : "Delete Transaction"}
+                    Back
+                  </Button>
+                  
+                  <Button
+                    type="button" 
+                    onClick={() => setActiveTab("additional")}
+                  >
+                    Next: Additional Info
+                  </Button>
+                </div>
+              </TabsContent>
+              
+              {/* Additional Info */}
+              <TabsContent value="additional" className="space-y-4">
+                <div className="border rounded-md p-4 space-y-4">
+                  <h3 className="text-lg font-medium">Additional Information</h3>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="source"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Source</FormLabel>
+                          <FormControl>
+                            <Input {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <FormField
+                      control={form.control}
+                      name="companyName"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Company</FormLabel>
+                          <FormControl>
+                            <Input {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="escrowOffice"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Escrow Office</FormLabel>
+                          <FormControl>
+                            <Input {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <FormField
+                      control={form.control}
+                      name="escrowOfficer"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Escrow Officer</FormLabel>
+                          <FormControl>
+                            <Input {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="referrer"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Referrer</FormLabel>
+                          <FormControl>
+                            <Input {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <FormField
+                      control={form.control}
+                      name="lender"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Lender</FormLabel>
+                          <FormControl>
+                            <Input {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                  
+                  <FormField
+                    control={form.control}
+                    name="showingAgent"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Showing Agent</FormLabel>
+                        <FormControl>
+                          <Input {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+                
+                <div className="flex justify-between pt-4">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setActiveTab("commission")}
+                  >
+                    Back
                   </Button>
                   
                   <div className="flex space-x-2">
                     <Button
                       type="button"
-                      variant="outline"
-                      onClick={onClose}
-                      disabled={updateTransactionMutation.isPending}
+                      variant="destructive"
+                      onClick={handleDelete}
+                      disabled={updateTransactionMutation.isPending || deleteTransactionMutation.isPending}
                     >
-                      Cancel
+                      {deleteTransactionMutation.isPending ? "Deleting..." : "Delete Transaction"}
                     </Button>
+                    
                     <Button
-                      type="button"
-                      onClick={form.handleSubmit(onSubmit)}
+                      type="submit"
                       disabled={updateTransactionMutation.isPending}
                     >
                       {updateTransactionMutation.isPending ? "Saving..." : "Save Changes"}
                     </Button>
                   </div>
                 </div>
-              </form>
-            </Form>
-          </TabsContent>
-          
-          {/* Revenue Share Breakdown */}
-          <TabsContent value="revenue-share" className="py-4">
-            <RevenueShareBreakdown transaction={transaction} />
-            
-            <div className="flex justify-end mt-4">
-              <Button variant="outline" onClick={onClose}>
-                Close
-              </Button>
-            </div>
-          </TabsContent>
-        </Tabs>
+              </TabsContent>
+              
+              {/* Revenue Share Breakdown */}
+              <TabsContent value="revenue-share" className="py-4">
+                <RevenueShareBreakdown transaction={transaction} />
+                
+                <div className="flex justify-between mt-4">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setActiveTab("additional")}
+                  >
+                    Back
+                  </Button>
+                  
+                  <div className="flex space-x-2">
+                    <Button
+                      type="button"
+                      variant="destructive"
+                      onClick={handleDelete}
+                      disabled={updateTransactionMutation.isPending || deleteTransactionMutation.isPending}
+                    >
+                      {deleteTransactionMutation.isPending ? "Deleting..." : "Delete Transaction"}
+                    </Button>
+                    
+                    <Button
+                      type="submit"
+                      disabled={updateTransactionMutation.isPending}
+                    >
+                      {updateTransactionMutation.isPending ? "Saving..." : "Save Changes"}
+                    </Button>
+                  </div>
+                </div>
+              </TabsContent>
+            </Tabs>
+          </form>
+        </Form>
       </div>
     </div>
   );
