@@ -146,12 +146,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Agent not found" });
       }
       
-      // Check if agent has transactions
-      const agentTransactions = await storage.getAgentTransactions(id);
-      if (agentTransactions.length > 0) {
-        return res.status(400).json({ 
-          message: "Cannot delete agent with existing transactions. Please reassign or delete the transactions first." 
-        });
+      // Check if agent has transactions directly using db query
+      try {
+        const agentTransactionsCount = await db
+          .select({ count: sql`count(*)` })
+          .from(transactions)
+          .where(eq(transactions.agentId, id));
+          
+        if (agentTransactionsCount.length > 0 && Number(agentTransactionsCount[0].count) > 0) {
+          return res.status(400).json({ 
+            message: "Cannot delete agent with existing transactions. Please reassign or delete the transactions first." 
+          });
+        }
+      } catch (txError) {
+        console.error("Error checking agent transactions:", txError);
+        return res.status(500).json({ message: "Error checking agent transactions" });
       }
       
       // Check if agent has downline
