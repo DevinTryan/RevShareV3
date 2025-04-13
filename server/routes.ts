@@ -271,11 +271,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const id = parseInt(req.params.id);
       const data = req.body;
       
+      console.log("Transaction update received:", JSON.stringify(data, null, 2));
+      
       // If manually adjusting the company share vs agent share
       if (data.totalCommissionAmount && data.companyPercentage) {
         const totalCommission = data.totalCommissionAmount;
         const companyPercentage = data.companyPercentage;
         data.companyGCI = (totalCommission * companyPercentage) / 100;
+      }
+      
+      // Handle additionalAgents specially if it exists
+      if (data.additionalAgents && Array.isArray(data.additionalAgents)) {
+        console.log(`Processing ${data.additionalAgents.length} additional agents`);
+        
+        // For now we're handling only the first additional agent in the array
+        // You may want to extend this to handle multiple agents in the future
+        if (data.additionalAgents.length > 0) {
+          const firstAgent = data.additionalAgents[0];
+          data.additionalAgentId = firstAgent.agentId;
+          data.additionalAgentFee = firstAgent.additionalCost || 0;
+          data.additionalAgentPercentage = firstAgent.percentage || 0;
+        }
+        
+        // Remove the additionalAgents array before passing to storage layer
+        delete data.additionalAgents;
       }
       
       const updatedTransaction = await storage.updateTransaction(id, data);
@@ -287,7 +306,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(updatedTransaction);
     } catch (error) {
       console.error("Transaction update error:", error);
-      res.status(500).json({ message: "Failed to update transaction" });
+      res.status(500).json({ 
+        message: "Failed to update transaction", 
+        error: error instanceof Error ? error.message : String(error) 
+      });
     }
   });
   

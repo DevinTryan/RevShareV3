@@ -339,7 +339,16 @@ export class DatabaseStorage implements IStorage {
         'companyGCI', 'transactionDate', 'transactionType', 'leadSource',
         'isCompanyProvided', 'isSelfGenerated', 'agentCommissionAmount', 
         'clientName', 'referralPercentage', 'referralAmount',
-        'showingAgentId', 'showingAgentFee'
+        'showingAgentId', 'showingAgentFee', 'additionalAgentCost',
+        'source', 'companyName', 'escrowOffice', 'escrowOfficer', 'referrer',
+        'lender', 'sellerCommissionPercentage', 'buyerCommissionPercentage',
+        'complianceFee', 'referralFee', 'showingAgent', 'teamAgentsIncome',
+        'personalIncome', 'actualCheckAmount', 'manualCommissionAmount',
+        'additionalAgentId', 'additionalAgentFee', 'additionalAgentPercentage',
+        'agentNameArchived', 'referralType', 'referralAgentName', 
+        'referralBrokerageName', 'officeGrossCommission', 'transactionCoordinatorFee',
+        'complianceFeePaidByClient', 'depositAmount', 'depositDate',
+        'depositPostedDate', 'commissionSplit', 'commissionNotes'
       ];
       
       // Convert camelCase fields to snake_case for SQL and collect values
@@ -394,7 +403,27 @@ export class DatabaseStorage implements IStorage {
           referral_amount as "referralAmount", 
           showing_agent_id as "showingAgentId", 
           showing_agent_fee as "showingAgentFee", 
-          agent_commission_amount as "agentCommissionAmount"
+          agent_commission_amount as "agentCommissionAmount",
+          source,
+          company_name as "companyName",
+          escrow_office as "escrowOffice",
+          escrow_officer as "escrowOfficer",
+          referrer,
+          lender,
+          seller_commission_percentage as "sellerCommissionPercentage",
+          buyer_commission_percentage as "buyerCommissionPercentage",
+          compliance_fee as "complianceFee",
+          referral_fee as "referralFee",
+          showing_agent as "showingAgent",
+          team_agents_income as "teamAgentsIncome",
+          personal_income as "personalIncome",
+          actual_check_amount as "actualCheckAmount",
+          manual_commission_amount as "manualCommissionAmount",
+          additional_agent_id as "additionalAgentId",
+          additional_agent_fee as "additionalAgentFee",
+          additional_agent_percentage as "additionalAgentPercentage",
+          additional_agent_cost as "additionalAgentCost",
+          agent_name_archived as "agentNameArchived"
       `;
       
       console.log("Executing update SQL:", sql, values);
