@@ -1,4 +1,4 @@
-import { Switch, Route } from "wouter";
+import { Route, Switch } from "wouter";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { queryClient } from "./lib/queryClient";
 import { Toaster } from "@/components/ui/toaster";
@@ -15,10 +15,10 @@ import NotFound from "@/pages/not-found";
 import Sidebar from "@/components/layout/Sidebar";
 import MobileHeader from "@/components/layout/MobileHeader";
 import { useState } from "react";
-import { AuthProvider } from "@/hooks/use-auth";
+import { AuthProvider, useAuth } from "@/hooks/use-auth";
 import { AgentProvider } from "@/context/AgentContext";
-import { ProtectedContent } from "@/components/auth/ProtectedContent";
-import { UserRole } from "@shared/schema";
+import { Loader2 } from "lucide-react";
+import { Redirect } from "wouter";
 
 function AppLayout({ children }: { children: React.ReactNode }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -26,73 +26,108 @@ function AppLayout({ children }: { children: React.ReactNode }) {
   const toggleMobileMenu = () => {
     setMobileMenuOpen(!mobileMenuOpen);
   };
-  
+
   // Assign the toggleMobileMenu function to the window object
   // so it can be used by PageHeader components
-  if (typeof window !== 'undefined') {
-    window.toggleMobileMenu = toggleMobileMenu;
+  if (typeof window !== "undefined") {
+    (window as any).toggleMobileMenu = toggleMobileMenu;
   }
 
   return (
     <div className="min-h-screen flex">
       <Sidebar isOpen={mobileMenuOpen} onClose={() => setMobileMenuOpen(false)} />
-      
+
       <div className="flex-1 flex flex-col overflow-hidden">
         <MobileHeader toggleMenu={toggleMobileMenu} />
-        
+
         <main className="flex-1 overflow-y-auto p-4 md:p-6 bg-gray-50">
           {children}
         </main>
       </div>
-      
+
       <Toaster />
     </div>
   );
 }
 
-function Router() {
+function ProtectedRoute({ children }: { children: React.ReactNode }) {
+  const { user, isLoading } = useAuth();
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (!user) {
+    return <Redirect to="/auth" />;
+  }
+
+  return <>{children}</>;
+}
+
+function AppRoutes() {
   return (
     <Switch>
-      {/* Public Routes */}
       <Route path="/auth">
         <AuthPage />
       </Route>
       <Route path="/unauthorized">
         <UnauthorizedPage />
       </Route>
-      
-      {/* Protected Routes - Only logged-in users can access these */}
       <Route path="/">
-        <ProtectedContent>
+        <ProtectedRoute>
           <AppLayout>
-            <Switch>
-              <Route path="/:rest*">
-                {(params) => {
-                  if (params.rest === undefined) {
-                    return <Dashboard />;
-                  }
-                  
-                  switch(params.rest) {
-                    case "agents":
-                      return <AgentsPage />;
-                    case "transactions":
-                      return <TransactionsPage />;
-                    case "revenue-share":
-                      return <RevenueSharePage />;
-                    case "reports":
-                      return <ReportsPage />;
-                    case "settings":
-                      return <SettingsPage />;
-                    case "integrations/zapier":
-                      return <ZapierSettingsPage />;
-                    default:
-                      return <NotFound />;
-                  }
-                }}
-              </Route>
-            </Switch>
+            <Dashboard />
           </AppLayout>
-        </ProtectedContent>
+        </ProtectedRoute>
+      </Route>
+      <Route path="/agents">
+        <ProtectedRoute>
+          <AppLayout>
+            <AgentsPage />
+          </AppLayout>
+        </ProtectedRoute>
+      </Route>
+      <Route path="/transactions">
+        <ProtectedRoute>
+          <AppLayout>
+            <TransactionsPage />
+          </AppLayout>
+        </ProtectedRoute>
+      </Route>
+      <Route path="/revenue-share">
+        <ProtectedRoute>
+          <AppLayout>
+            <RevenueSharePage />
+          </AppLayout>
+        </ProtectedRoute>
+      </Route>
+      <Route path="/reports">
+        <ProtectedRoute>
+          <AppLayout>
+            <ReportsPage />
+          </AppLayout>
+        </ProtectedRoute>
+      </Route>
+      <Route path="/settings">
+        <ProtectedRoute>
+          <AppLayout>
+            <SettingsPage />
+          </AppLayout>
+        </ProtectedRoute>
+      </Route>
+      <Route path="/integrations/zapier">
+        <ProtectedRoute>
+          <AppLayout>
+            <ZapierSettingsPage />
+          </AppLayout>
+        </ProtectedRoute>
+      </Route>
+      <Route>
+        <NotFound />
       </Route>
     </Switch>
   );
@@ -103,7 +138,7 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <AgentProvider>
         <AuthProvider>
-          <Router />
+          <AppRoutes />
         </AuthProvider>
       </AgentProvider>
     </QueryClientProvider>
