@@ -2,6 +2,9 @@ import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Transaction, Agent } from "@shared/schema";
 import { format } from "date-fns";
+import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import EditTransactionForm from "@/components/forms/EditTransactionForm";
 
 interface CombinedTransaction extends Transaction {
   agent?: Agent;
@@ -17,6 +20,8 @@ interface TransactionsTableProps {
 const TransactionsTable = ({ limit, showViewAll = false, onViewAllClick }: TransactionsTableProps) => {
   const [currentPage, setCurrentPage] = useState(1);
   const [perPage, setPerPage] = useState(10);
+  const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   
   // Fetch transactions
   const { data: transactions, isLoading: isLoadingTransactions } = useQuery<Transaction[]>({
@@ -123,6 +128,21 @@ const TransactionsTable = ({ limit, showViewAll = false, onViewAllClick }: Trans
   
   return (
     <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
+      {/* Edit Transaction Dialog */}
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
+          <DialogTitle className="text-lg font-semibold text-gray-900">
+            Edit Transaction
+          </DialogTitle>
+          {editingTransaction && (
+            <EditTransactionForm 
+              transaction={editingTransaction} 
+              onClose={() => setIsEditDialogOpen(false)} 
+            />
+          )}
+        </DialogContent>
+      </Dialog>
+      
       <div className="px-4 py-3 border-b border-gray-200 flex justify-between items-center">
         <h2 className="font-semibold text-gray-800">
           {limit ? 'Recent Transactions' : 'Transactions'}
@@ -156,6 +176,9 @@ const TransactionsTable = ({ limit, showViewAll = false, onViewAllClick }: Trans
               <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Revenue Share
               </th>
+              <th scope="col" className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Actions
+              </th>
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
@@ -186,6 +209,18 @@ const TransactionsTable = ({ limit, showViewAll = false, onViewAllClick }: Trans
                 </td>
                 <td className="px-4 py-3 whitespace-nowrap text-sm text-success-600">
                   ${transaction.revenueShareTotal?.toLocaleString() || '0.00'}
+                </td>
+                <td className="px-4 py-3 whitespace-nowrap text-right">
+                  <Button 
+                    variant="ghost" 
+                    size="sm"
+                    onClick={() => {
+                      setEditingTransaction(transaction);
+                      setIsEditDialogOpen(true);
+                    }}
+                  >
+                    <i className="ri-edit-line mr-1"></i> Edit
+                  </Button>
                 </td>
               </tr>
             ))}

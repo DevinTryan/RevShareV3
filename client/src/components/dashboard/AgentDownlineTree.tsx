@@ -1,5 +1,9 @@
 import { Badge } from "@/components/ui/badge";
-import { AgentWithDownline, AgentType } from "@shared/schema";
+import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { useState } from "react";
+import { AgentWithDownline, AgentType, Agent } from "@shared/schema";
+import EditAgentForm from "@/components/forms/EditAgentForm";
 
 interface AgentDownlineTreeProps {
   rootAgent?: AgentWithDownline;
