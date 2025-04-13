@@ -7,7 +7,9 @@ import {
   AgentType,
   CapType,
   UserRole,
-  User
+  User,
+  agents,
+  transactions
 } from "@shared/schema";
 import { z } from "zod";
 import { ZodError } from "zod";
@@ -23,6 +25,8 @@ import {
   triggerWebhooks 
 } from "./webhooks";
 import { setupAuth, hashPassword } from "./auth";
+import { db } from "./db";
+import { eq, sql } from "drizzle-orm";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Set up authentication and get middleware
@@ -146,28 +150,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Agent not found" });
       }
       
-      // Check if agent has transactions directly using db query
+      // Instead of preventing deletion, save agent name for transactions
+      // This way transactions will still display the agent name even after deletion
       try {
-        const agentTransactionsCount = await db
+        const hasTransactions = await db
           .select({ count: sql`count(*)` })
           .from(transactions)
           .where(eq(transactions.agentId, id));
           
-        if (agentTransactionsCount.length > 0 && Number(agentTransactionsCount[0].count) > 0) {
-          return res.status(400).json({ 
-            message: "Cannot delete agent with existing transactions. Please reassign or delete the transactions first." 
-          });
+        if (hasTransactions.length > 0 && Number(hasTransactions[0].count) > 0) {
+          // Create an "archived" field to store agent name for transactions
+          await db.execute(sql`
+            ALTER TABLE transactions 
+            ADD COLUMN IF NOT EXISTS agent_name_archived TEXT
+          `);
+          
+          // Save the agent name to all transactions before deletion
+          await db.execute(sql`
+            UPDATE transactions
+            SET agent_name_archived = ${agent.name}
+            WHERE agent_id = ${id}
+          `);
+          
+          console.log(`Agent name '${agent.name}' archived for ${hasTransactions[0].count} transactions`);
         }
       } catch (txError) {
-        console.error("Error checking agent transactions:", txError);
-        return res.status(500).json({ message: "Error checking agent transactions" });
+        console.error("Error updating transaction agent names:", txError);
+        // Continue with deletion even if archiving fails
       }
       
       // Check if agent has downline
       const agentWithDownline = await storage.getAgentWithDownline(id);
       if (agentWithDownline?.downline && agentWithDownline.downline.length > 0) {
         return res.status(400).json({ 
-          message: "Cannot delete agent with downline. Please reassign or delete the downline agents first." 
+          message: "Cannot delete agent with sponsored agents. Please reassign or delete sponsored agents first." 
         });
       }
       
@@ -181,7 +197,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       res.status(204).end();
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error deleting agent:", error);
       res.status(500).json({ message: `Failed to delete agent: ${error.message}` });
     }

@@ -82,6 +82,9 @@ export const transactions = pgTable("transactions", {
   clientEmail: text("client_email"),
   clientPhone: text("client_phone"),
   
+  // Deleted agent info (preserved for record keeping)
+  agentNameArchived: text("agent_name_archived"),
+  
   // Transaction details
   transactionType: text("transaction_type").default("buyer"), // buyer or seller
   transactionStatus: text("transaction_status").default("pending"), // pending, closed, cancelled
