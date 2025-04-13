@@ -406,15 +406,15 @@ export class DatabaseStorage implements IStorage {
         return existingTransaction;
       }
       
-      // Add transaction ID as last parameter and use proper parameterization
-      const paramNumber = paramCounter; // Get the next parameter number
+      // Add transaction ID parameter
+      updateParts.push(`id = $${paramCounter}`);
       values.push(id);
       
-      // Include id in update parts using proper parameterization
+      // Build the SQL query
       const sql = `
         UPDATE transactions
         SET ${updateParts.join(', ')}
-        WHERE id = $${paramNumber}
+        WHERE id = $${paramCounter}
         RETURNING 
           id, 
           agent_id as "agentId", 
