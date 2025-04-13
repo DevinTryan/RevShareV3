@@ -58,12 +58,7 @@ export class DatabaseStorage implements IStorage {
 
   async deleteAgent(id: number): Promise<boolean> {
     try {
-      // Check if agent has transactions or revenue shares
-      const agentTransactions = await db
-        .select()
-        .from(transactions)
-        .where(eq(transactions.agentId, id));
-      
+      // Check only for revenue shares - transactions are allowed because we archive the agent name
       const recipientShares = await db
         .select()
         .from(revenueShares)
@@ -74,8 +69,8 @@ export class DatabaseStorage implements IStorage {
         .from(revenueShares)
         .where(eq(revenueShares.sourceAgentId, id));
       
-      // If agent has related records, don't delete
-      if (agentTransactions.length > 0 || recipientShares.length > 0 || sourceShares.length > 0) {
+      // If agent has revenue share records, don't delete
+      if (recipientShares.length > 0 || sourceShares.length > 0) {
         return false;
       }
       
