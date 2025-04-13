@@ -240,7 +240,8 @@ export class MemStorage implements IStorage {
       if (revenueShareAmount > 0) {
         const revenueShare: InsertRevenueShare = {
           transactionId: transaction.id,
-          sponsorId,
+          sourceAgentId: transaction.agentId,
+          recipientAgentId: sponsorId,
           amount: revenueShareAmount,
           tier
         };

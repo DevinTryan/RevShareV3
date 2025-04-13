@@ -1,10 +1,17 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { RevenueShare, Agent } from "@shared/schema";
+import { RevenueShare, Agent, AgentType } from "@shared/schema";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
 import { AgentWithDownline } from "@shared/schema";
+
+// Define an extended type for our revenue share with the new fields
+interface ExtendedRevenueShare extends RevenueShare {
+  recipientAgentId: number;
+  sourceAgentId: number;
+}
 
 const RevenueSharePage = () => {
   const [selectedAgentId, setSelectedAgentId] = useState<string | null>(null);
@@ -14,7 +21,7 @@ const RevenueSharePage = () => {
   });
 
   // Fetch all revenue shares
-  const { data: revenueShares, isLoading: isLoadingShares } = useQuery<RevenueShare[]>({
+  const { data: revenueShares, isLoading: isLoadingShares } = useQuery<ExtendedRevenueShare[]>({
     queryKey: ['/api/revenue-shares'],
   });
 
@@ -30,6 +37,8 @@ const RevenueSharePage = () => {
 
   // Filter shares by agent and date range
   const filteredShares = revenueShares?.filter(share => {
+    if (!share.createdAt) return false;
+    
     const shareDate = new Date(share.createdAt);
     const fromDate = new Date(dateRange.from);
     const toDate = new Date(dateRange.to);
@@ -55,7 +64,7 @@ const RevenueSharePage = () => {
     acc[agentId].totalAmount += share.amount;
     acc[agentId].shares.push(share);
     return acc;
-  }, {} as Record<number, { agent?: Agent; totalAmount: number; shares: RevenueShare[] }>);
+  }, {} as Record<number, { agent?: Agent; totalAmount: number; shares: ExtendedRevenueShare[] }>);
 
   // Calculate overall total
   const totalRevenueShare = filteredShares?.reduce((sum, share) => sum + share.amount, 0) || 0;
@@ -87,15 +96,21 @@ const RevenueSharePage = () => {
     
     filteredShares.forEach(share => {
       const agent = agents.find(a => a.id === share.recipientAgentId);
-      const transaction = { // Mock transaction data
-        transactionDate: new Date(share.createdAt).toLocaleDateString(),
+      
+      // Use safe date construction
+      const dateStr = share.createdAt ? new Date(share.createdAt).toLocaleDateString() : 'Unknown';
+      
+      const transaction = {
+        transactionDate: dateStr,
         propertyAddress: 'Transaction #' + share.transactionId,
-        saleAmount: 0, // This would come from actual transaction data
+        saleAmount: 0,
       };
 
       // Find tier level
       const sourceAgent = agents.find(a => a.id === share.sourceAgentId);
-      const tierLevel = sourceAgent ? getSponsorshipPath(sourceAgent.id).findIndex(a => a.id === share.recipientAgentId) + 1 : 0;
+      const tierLevel = sourceAgent 
+        ? getSponsorshipPath(sourceAgent.id).findIndex(a => a.id === share.recipientAgentId) + 1 
+        : 0;
 
       csvContent += `${transaction.transactionDate},${transaction.propertyAddress},${transaction.saleAmount},${agent?.name || 'Unknown'}, Tier ${tierLevel},${share.amount.toFixed(2)}\n`;
     });
@@ -110,6 +125,35 @@ const RevenueSharePage = () => {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+  };
+
+  // Function to get avatar color based on agent name
+  const getAvatarColor = (name: string): string => {
+    if (!name) return "bg-gray-400";
+    
+    const colors = [
+      'bg-primary-600',
+      'bg-blue-500',
+      'bg-indigo-500',
+      'bg-purple-500',
+      'bg-green-500',
+      'bg-yellow-500',
+      'bg-red-500',
+      'bg-pink-500'
+    ];
+    
+    const sum = name.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+    return colors[sum % colors.length];
+  };
+
+  // Function to get initials from agent name
+  const getInitials = (name: string): string => {
+    if (!name) return "N/A";
+    return name
+      .split(' ')
+      .map(part => part.charAt(0))
+      .join('')
+      .toUpperCase();
   };
 
   return (
@@ -258,24 +302,50 @@ const RevenueSharePage = () => {
                     ? getSponsorshipPath(sourceAgent.id).findIndex(a => a.id === share.recipientAgentId) + 1 
                     : 0;
                   
+                  // Safe date handling
+                  const shareDate = share.createdAt ? new Date(share.createdAt) : null;
+                  const formattedDate = shareDate ? shareDate.toLocaleDateString() : 'Unknown';
+                  
                   return (
                     <tr key={share.id} className="hover:bg-gray-50">
                       <td className="px-4 py-3 whitespace-nowrap">
-                        <div className="text-sm font-medium text-gray-900">{recipientAgent?.name || 'Unknown'}</div>
-                        <div className="text-xs text-gray-500">{recipientAgent?.agentType || ''}</div>
+                        <div className="flex items-center">
+                          <div className={`h-8 w-8 rounded-full ${getAvatarColor(recipientAgent?.name || '')} flex items-center justify-center text-white font-medium`}>
+                            {getInitials(recipientAgent?.name || '')}
+                          </div>
+                          <div className="ml-3">
+                            <div className="text-sm font-medium text-gray-900">{recipientAgent?.name || 'Unknown'}</div>
+                            <div className="text-xs text-gray-500">
+                              <Badge variant={recipientAgent?.agentType === AgentType.PRINCIPAL ? 'principal' : 'support'}>
+                                {recipientAgent?.agentType === AgentType.PRINCIPAL ? 'Principal' : 'Support'}
+                              </Badge>
+                            </div>
+                          </div>
+                        </div>
                       </td>
                       <td className="px-4 py-3 whitespace-nowrap">
-                        <div className="text-sm font-medium text-gray-900">{sourceAgent?.name || 'Unknown'}</div>
-                        <div className="text-xs text-gray-500">{sourceAgent?.agentType || ''}</div>
+                        <div className="flex items-center">
+                          <div className={`h-8 w-8 rounded-full ${getAvatarColor(sourceAgent?.name || '')} flex items-center justify-center text-white font-medium`}>
+                            {getInitials(sourceAgent?.name || '')}
+                          </div>
+                          <div className="ml-3">
+                            <div className="text-sm font-medium text-gray-900">{sourceAgent?.name || 'Unknown'}</div>
+                            <div className="text-xs text-gray-500">
+                              <Badge variant={sourceAgent?.agentType === AgentType.PRINCIPAL ? 'principal' : 'support'}>
+                                {sourceAgent?.agentType === AgentType.PRINCIPAL ? 'Principal' : 'Support'}
+                              </Badge>
+                            </div>
+                          </div>
+                        </div>
                       </td>
                       <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
-                        Tier {tierLevel}
+                        Tier {tierLevel || share.tier}
                       </td>
                       <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
                         ID: {share.transactionId}
                       </td>
                       <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
-                        {new Date(share.createdAt).toLocaleDateString()}
+                        {formattedDate}
                       </td>
                       <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-green-600">
                         ${share.amount.toLocaleString()}
