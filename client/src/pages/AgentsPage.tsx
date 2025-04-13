@@ -1,15 +1,20 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Agent } from "@shared/schema";
+import { Agent, AgentWithDownline } from "@shared/schema";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import AddAgentForm from "@/components/forms/AddAgentForm";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import EditAgentForm from "@/components/forms/EditAgentForm";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { format } from "date-fns";
+import AgentDownlineTree from "@/components/dashboard/AgentDownlineTree";
 
 const AgentsPage = () => {
   const [isAddAgentDialogOpen, setIsAddAgentDialogOpen] = useState(false);
+  const [isEditAgentDialogOpen, setIsEditAgentDialogOpen] = useState(false);
+  const [isViewDownlineDialogOpen, setIsViewDownlineDialogOpen] = useState(false);
+  const [selectedAgent, setSelectedAgent] = useState<Agent | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
 
   const { data: agents, isLoading } = useQuery<Agent[]>({
@@ -132,22 +137,37 @@ const AgentsPage = () => {
                   <div className="text-gray-600">Current Cap:</div>
                   <div className="text-gray-900">
                     {agent.agentType === 'principal' 
-                      ? `$${agent.currentCap.toLocaleString()} / $${agent.capType === 'team' ? '8,000' : '16,000'}`
+                      ? `$${(agent.currentCap || 0).toLocaleString()} / $${agent.capType === 'team' ? '8,000' : '16,000'}`
                       : 'N/A'
                     }
                   </div>
                   
                   <div className="text-gray-600">Added On:</div>
                   <div className="text-gray-900">
-                    {format(new Date(agent.createdAt), 'MMM dd, yyyy')}
+                    {agent.createdAt ? format(new Date(agent.createdAt), 'MMM dd, yyyy') : 'N/A'}
                   </div>
                 </div>
                 
                 <div className="mt-4 flex justify-end space-x-2">
-                  <Button variant="outline" size="sm">
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => {
+                      setSelectedAgent(agent);
+                      setIsEditAgentDialogOpen(true);
+                    }}
+                  >
                     <i className="ri-edit-line mr-1"></i> Edit
                   </Button>
-                  <Button variant="outline" size="sm" className="text-green-600 border-green-600 hover:bg-green-50">
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="text-green-600 border-green-600 hover:bg-green-50"
+                    onClick={() => {
+                      setSelectedAgent(agent);
+                      setIsViewDownlineDialogOpen(true);
+                    }}
+                  >
                     <i className="ri-team-line mr-1"></i> View Downline
                   </Button>
                 </div>
@@ -160,12 +180,59 @@ const AgentsPage = () => {
       {/* Add Agent Dialog */}
       <Dialog open={isAddAgentDialogOpen} onOpenChange={setIsAddAgentDialogOpen}>
         <DialogContent className="sm:max-w-[425px]">
-          <h2 className="font-semibold text-gray-800 mb-4">Add New Agent</h2>
+          <DialogTitle className="text-lg font-semibold text-gray-900">
+            Add New Agent
+          </DialogTitle>
           <AddAgentForm onAgentAdded={() => setIsAddAgentDialogOpen(false)} />
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Agent Dialog */}
+      <Dialog open={isEditAgentDialogOpen} onOpenChange={setIsEditAgentDialogOpen}>
+        <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
+          <DialogTitle className="text-lg font-semibold text-gray-900">
+            Edit Agent
+          </DialogTitle>
+          {selectedAgent && (
+            <EditAgentForm
+              agent={selectedAgent}
+              onClose={() => setIsEditAgentDialogOpen(false)}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* View Downline Dialog */}
+      <Dialog open={isViewDownlineDialogOpen} onOpenChange={setIsViewDownlineDialogOpen}>
+        <DialogContent className="sm:max-w-[800px] h-[80vh] overflow-y-auto">
+          <DialogTitle className="text-lg font-semibold text-gray-900">
+            {selectedAgent?.name}'s Downline
+          </DialogTitle>
+          {selectedAgent && (
+            <div className="mt-4">
+              {/* Agent Downline Query */}
+              <AgentDownlineQuery agentId={selectedAgent.id} />
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </>
   );
 };
+
+// Helper component to fetch and display agent downline
+function AgentDownlineQuery({ agentId }: { agentId: number }) {
+  const { data: agentWithDownline, isLoading } = useQuery<AgentWithDownline>({
+    queryKey: [`/api/agents/${agentId}/downline`],
+  });
+
+  return (
+    <AgentDownlineTree 
+      rootAgent={agentWithDownline} 
+      isLoading={isLoading} 
+      onAddRecruit={() => {}} // We don't need to add recruits in this view
+    />
+  );
+}
 
 export default AgentsPage;
