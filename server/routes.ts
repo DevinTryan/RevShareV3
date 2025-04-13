@@ -376,10 +376,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const filters: any = {};
       
       if (startDate && endDate) {
-        filters.dateRange = {
-          start: new Date(startDate as string),
-          end: new Date(endDate as string)
-        };
+        filters.startDate = startDate as string;
+        filters.endDate = endDate as string;
       }
       
       if (agentId) {
@@ -401,10 +399,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const filters: any = {};
       
       if (startDate && endDate) {
-        filters.dateRange = {
-          start: new Date(startDate as string),
-          end: new Date(endDate as string)
-        };
+        filters.startDate = startDate as string;
+        filters.endDate = endDate as string;
       }
       
       const zipCodeReport = await storage.getZipCodeAnalysisReport(filters);

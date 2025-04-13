@@ -10,7 +10,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Loader2, Download, Filter, PieChart, BarChart3, Activity, MapPin, Users, RefreshCw, Search } from "lucide-react";
 import { LeadSource, AgentType } from "@shared/schema";
-import { formatCurrency } from "@/utils/formatters";
+import { formatCurrency } from "../utils/formatters";
 import { useAgentContext } from "@/context/AgentContext";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer, PieChart as RePieChart, Pie, Cell, LineChart, Line, CartesianGrid } from 'recharts';
 
