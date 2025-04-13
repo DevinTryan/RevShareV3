@@ -63,6 +63,13 @@ interface User {
   lastLogin: string | null;
 }
 
+// Define Agent interface
+interface Agent {
+  id: number;
+  name: string;
+  [key: string]: any;
+}
+
 // Create User Schema for form validation
 const createUserSchema = z.object({
   username: z.string().min(3, { message: "Username must be at least 3 characters" }),
@@ -112,7 +119,7 @@ const UsersPage = () => {
   }
 
   // Fetch users
-  const { data: users, isLoading } = useQuery<User[]>({
+  const { data: users = [], isLoading } = useQuery<User[]>({
     queryKey: ['/api/admin/users'],
     queryFn: async () => {
       const response = await apiRequest('GET', '/api/admin/users');
@@ -121,7 +128,7 @@ const UsersPage = () => {
   });
 
   // Fetch agents for select dropdown
-  const { data: agents = [] } = useQuery<any[]>({
+  const { data: agents = [] } = useQuery<Agent[]>({
     queryKey: ['/api/agents'],
   });
 
@@ -482,7 +489,7 @@ const UsersPage = () => {
                       </FormControl>
                       <SelectContent>
                         <SelectItem value="none">None</SelectItem>
-                        {agents?.map((agent) => (
+                        {agents.map((agent: Agent) => (
                           <SelectItem key={agent.id} value={agent.id.toString()}>
                             {agent.name}
                           </SelectItem>
@@ -596,7 +603,7 @@ const UsersPage = () => {
                       </FormControl>
                       <SelectContent>
                         <SelectItem value="none">None</SelectItem>
-                        {agents?.map((agent) => (
+                        {agents.map((agent: Agent) => (
                           <SelectItem key={agent.id} value={agent.id.toString()}>
                             {agent.name}
                           </SelectItem>
