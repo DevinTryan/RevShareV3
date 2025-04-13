@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { AgentWithDownline, Agent, Transaction, RevenueShare } from "@shared/schema";
 import StatCard from "@/components/dashboard/StatCard";
 import AgentDownlineTree from "@/components/dashboard/AgentDownlineTree";
+import TransactionPipeline from "@/components/dashboard/TransactionPipeline";
 import AddAgentForm from "@/components/forms/AddAgentForm";
 import AddTransactionForm from "@/components/forms/AddTransactionForm";
 import TransactionsTable from "@/components/transactions/TransactionsTable";
@@ -281,6 +282,13 @@ const Dashboard = () => {
             sparklineData={agentSparklineData.slice(-10)}
             sparklineColor="#e11d48"
           />
+        </div>
+      </div>
+      
+      {/* Transaction Pipeline */}
+      <div className="mb-8">
+        <div className="grid grid-cols-1 gap-4">
+          {transactions && <TransactionPipeline transactions={transactions} />}
         </div>
       </div>
       
