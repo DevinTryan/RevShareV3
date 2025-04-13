@@ -20,6 +20,12 @@ function Router() {
   const toggleMobileMenu = () => {
     setMobileMenuOpen(!mobileMenuOpen);
   };
+  
+  // Assign the toggleMobileMenu function to the window object
+  // so it can be used by PageHeader components
+  if (typeof window !== 'undefined') {
+    window.toggleMobileMenu = toggleMobileMenu;
+  }
 
   return (
     <div className="min-h-screen flex">

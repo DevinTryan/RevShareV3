@@ -1,4 +1,4 @@
-import { pgTable, text, serial, integer, boolean, doublePrecision, timestamp, foreignKey } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, boolean, doublePrecision, timestamp, foreignKey, pgEnum } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -41,6 +41,12 @@ export enum SupportAgentTier {
   TIER_7 = 7, // $400,000-$500,000 - 88%
   TIER_8 = 8, // $500,000-$650,000 - 90%
   TIER_9 = 9  // $650,000+ - 92%
+}
+
+// User roles
+export enum UserRole {
+  ADMIN = "admin",
+  AGENT = "agent"
 }
 
 // Agent table definition
@@ -93,6 +99,20 @@ export const revenueShares = pgTable("revenue_shares", {
   amount: doublePrecision("amount").notNull(),
   tier: integer("tier").notNull(), // 1-5 levels
   createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Users table definition for authentication
+export const users = pgTable("users", {
+  id: serial("id").primaryKey(),
+  username: text("username").notNull().unique(),
+  password: text("password").notNull(),
+  email: text("email").notNull(),
+  role: text("role").notNull().$type<UserRole>().default(UserRole.AGENT),
+  agentId: integer("agent_id").references(() => agents.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  lastLogin: timestamp("last_login"),
+  resetToken: text("reset_token"),
+  resetTokenExpiry: timestamp("reset_token_expiry"),
 });
 
 // Insert schemas
@@ -166,6 +186,26 @@ export const insertTransactionSchema = createInsertSchema(transactions)
 export const insertRevenueShareSchema = createInsertSchema(revenueShares)
   .omit({ id: true, createdAt: true });
 
+export const insertUserSchema = createInsertSchema(users)
+  .omit({ id: true, createdAt: true, lastLogin: true, resetToken: true, resetTokenExpiry: true })
+  .extend({
+    role: z.nativeEnum(UserRole),
+    // Require strong password with at least 8 characters, including one uppercase, one lowercase, one number
+    password: z.string().min(8).regex(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).+$/, {
+      message: "Password must be at least 8 characters and include uppercase, lowercase, and number"
+    }),
+    email: z.string().email({ message: "Invalid email address" }),
+    // Agent ID is optional for admin users, required for agent users
+    agentId: z.number().optional().refine((val, ctx) => {
+      if (ctx.data?.role === UserRole.AGENT && !val) {
+        return false;
+      }
+      return true;
+    }, {
+      message: "Agent ID is required for users with agent role"
+    })
+  });
+
 // Types
 export type Agent = typeof agents.$inferSelect;
 export type InsertAgent = z.infer<typeof insertAgentSchema>;
@@ -175,6 +215,9 @@ export type InsertTransaction = z.infer<typeof insertTransactionSchema>;
 
 export type RevenueShare = typeof revenueShares.$inferSelect;
 export type InsertRevenueShare = z.infer<typeof insertRevenueShareSchema>;
+
+export type User = typeof users.$inferSelect;
+export type InsertUser = z.infer<typeof insertUserSchema>;
 
 // Additional type for agent with downline information
 export interface AgentWithDownline extends Agent {
