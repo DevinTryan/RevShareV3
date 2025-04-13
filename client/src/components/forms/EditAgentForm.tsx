@@ -59,7 +59,12 @@ const EditAgentForm = ({ agent, onClose }: EditAgentFormProps) => {
         anniversaryDate: new Date(data.anniversaryDate).toISOString(),
       };
       
+      console.log('Sending agent update:', formattedData);
       const response = await apiRequest('PUT', `/api/agents/${agent.id}`, formattedData);
+      if (!response.ok) {
+        const errorResponse = await response.json();
+        throw new Error(errorResponse.message || 'Failed to update agent');
+      }
       return response.json();
     },
     onSuccess: () => {
@@ -83,7 +88,12 @@ const EditAgentForm = ({ agent, onClose }: EditAgentFormProps) => {
   const deleteAgentMutation = useMutation({
     mutationFn: async () => {
       setIsDeleting(true);
+      console.log('Deleting agent with ID:', agent.id);
       const response = await apiRequest('DELETE', `/api/agents/${agent.id}`);
+      if (!response.ok) {
+        const errorResponse = await response.json().catch(() => ({}));
+        throw new Error(errorResponse.message || 'Failed to delete agent');
+      }
       return response;
     },
     onSuccess: () => {

@@ -107,10 +107,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log("Updating agent with ID:", id);
       console.log("Update data:", JSON.stringify(agentData, null, 2));
       
+      // First check if the agent exists
+      const agent = await storage.getAgent(id);
+      if (!agent) {
+        return res.status(404).json({ message: "Agent not found" });
+      }
+      
+      // Make sure all required fields are present
+      if (!agentData.name || !agentData.agentType) {
+        return res.status(400).json({
+          message: "Missing required fields. Name and agent type are required."
+        });
+      }
+      
+      // Attempt to update
       const updatedAgent = await storage.updateAgent(id, agentData);
       
       if (!updatedAgent) {
-        return res.status(404).json({ message: "Agent not found" });
+        return res.status(500).json({ message: "Failed to update agent" });
       }
       
       res.json(updatedAgent);
@@ -126,10 +140,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       console.log("Deleting agent with ID:", id);
       
+      // First check if the agent exists
+      const agent = await storage.getAgent(id);
+      if (!agent) {
+        return res.status(404).json({ message: "Agent not found" });
+      }
+      
+      // Check if agent has transactions
+      const agentTransactions = await storage.getAgentTransactions(id);
+      if (agentTransactions.length > 0) {
+        return res.status(400).json({ 
+          message: "Cannot delete agent with existing transactions. Please reassign or delete the transactions first." 
+        });
+      }
+      
+      // Check if agent has downline
+      const agentWithDownline = await storage.getAgentWithDownline(id);
+      if (agentWithDownline?.downline && agentWithDownline.downline.length > 0) {
+        return res.status(400).json({ 
+          message: "Cannot delete agent with downline. Please reassign or delete the downline agents first." 
+        });
+      }
+      
+      // Try to delete the agent
       const success = await storage.deleteAgent(id);
       
       if (!success) {
-        return res.status(404).json({ message: "Agent not found" });
+        return res.status(400).json({ 
+          message: "Could not delete agent. The agent may have revenue shares or other related records." 
+        });
       }
       
       res.status(204).end();

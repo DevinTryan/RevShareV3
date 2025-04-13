@@ -168,7 +168,7 @@ const AgentsPage = () => {
                       setIsViewDownlineDialogOpen(true);
                     }}
                   >
-                    <i className="ri-team-line mr-1"></i> View Downline
+                    <i className="ri-team-line mr-1"></i> View Sponsor Tree
                   </Button>
                 </div>
               </div>
@@ -206,7 +206,7 @@ const AgentsPage = () => {
       <Dialog open={isViewDownlineDialogOpen} onOpenChange={setIsViewDownlineDialogOpen}>
         <DialogContent className="sm:max-w-[800px] h-[80vh] overflow-y-auto">
           <DialogTitle className="text-lg font-semibold text-gray-900">
-            {selectedAgent?.name}'s Downline
+            {selectedAgent?.name}'s Sponsor Tree
           </DialogTitle>
           {selectedAgent && (
             <div className="mt-4">
