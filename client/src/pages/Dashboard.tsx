@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { AgentWithDownline, Agent, Transaction, RevenueShare } from "@shared/schema";
@@ -9,7 +9,17 @@ import AddTransactionForm from "@/components/forms/AddTransactionForm";
 import TransactionsTable from "@/components/transactions/TransactionsTable";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { format, startOfMonth, endOfMonth, isWithinInterval } from "date-fns";
+import { 
+  format, 
+  startOfMonth, 
+  endOfMonth, 
+  isWithinInterval,
+  subMonths,
+  startOfDay,
+  parseISO,
+  differenceInCalendarDays,
+  addDays
+} from "date-fns";
 
 const Dashboard = () => {
   const [, navigate] = useLocation();
@@ -82,6 +92,76 @@ const Dashboard = () => {
     return isWithinInterval(createdAt, { start: currentMonthStart, end: currentMonthEnd });
   }).length || 0;
   
+  // Generate sparkline data for the past 30 days
+  const generateSparklineData = (dataType: 'transactions' | 'gci' | 'agents') => {
+    const today = startOfDay(new Date());
+    const thirtyDaysAgo = startOfDay(subMonths(today, 1));
+    const days = differenceInCalendarDays(today, thirtyDaysAgo);
+    
+    // Initialize the array with zeros for each day
+    const sparklineData = Array.from({ length: days + 1 }, (_, i) => ({
+      date: addDays(thirtyDaysAgo, i),
+      value: 0
+    }));
+    
+    if (dataType === 'transactions' && transactions) {
+      // Count transactions by day
+      transactions.forEach(tx => {
+        const txDate = new Date(tx.transactionDate);
+        // Only include transactions within the last 30 days
+        if (isWithinInterval(txDate, { start: thirtyDaysAgo, end: today })) {
+          const dayIndex = differenceInCalendarDays(txDate, thirtyDaysAgo);
+          if (dayIndex >= 0 && dayIndex < sparklineData.length) {
+            sparklineData[dayIndex].value += 1;
+          }
+        }
+      });
+    } else if (dataType === 'gci' && transactions) {
+      // Sum GCI by day
+      transactions.forEach(tx => {
+        const txDate = new Date(tx.transactionDate);
+        // Only include transactions within the last 30 days
+        if (isWithinInterval(txDate, { start: thirtyDaysAgo, end: today })) {
+          const dayIndex = differenceInCalendarDays(txDate, thirtyDaysAgo);
+          if (dayIndex >= 0 && dayIndex < sparklineData.length) {
+            sparklineData[dayIndex].value += tx.companyGCI || 0;
+          }
+        }
+      });
+    } else if (dataType === 'agents' && agents) {
+      // Count agents by join date
+      agents.forEach(agent => {
+        if (!agent.createdAt) return;
+        const createdAt = new Date(agent.createdAt);
+        // Only include agents who joined within the last 30 days
+        if (isWithinInterval(createdAt, { start: thirtyDaysAgo, end: today })) {
+          const dayIndex = differenceInCalendarDays(createdAt, thirtyDaysAgo);
+          if (dayIndex >= 0 && dayIndex < sparklineData.length) {
+            sparklineData[dayIndex].value += 1;
+          }
+        }
+      });
+    }
+    
+    // Apply a cumulative sum for better visualization if needed
+    // (Comment out if you prefer to see daily values instead of cumulative)
+    let cumulativeSum = 0;
+    const cumulativeData = sparklineData.map(day => {
+      cumulativeSum += day.value;
+      return {
+        ...day,
+        value: cumulativeSum
+      };
+    });
+    
+    return cumulativeData;
+  };
+  
+  // Memoize sparkline data calculations to prevent unnecessary recalculations
+  const transactionSparklineData = useMemo(() => generateSparklineData('transactions'), [transactions]);
+  const gciSparklineData = useMemo(() => generateSparklineData('gci'), [transactions]);
+  const agentSparklineData = useMemo(() => generateSparklineData('agents'), [agents]);
+  
   // Handle adding a new recruit
   const handleAddRecruit = (sponsorId: number) => {
     setSelectedSponsorId(sponsorId);
@@ -109,6 +189,8 @@ const Dashboard = () => {
           icon="ri-user-line" 
           iconBgClass="bg-primary-50" 
           iconTextClass="text-primary-600"
+          sparklineData={agentSparklineData}
+          sparklineColor="#6366f1"
         />
         
         <StatCard 
@@ -118,6 +200,9 @@ const Dashboard = () => {
           icon="ri-money-dollar-circle-line" 
           iconBgClass="bg-success-50" 
           iconTextClass="text-success-500"
+          sparklineData={gciSparklineData}
+          sparklineColor="#10b981"
+          sparklineType="area"
         />
         
         <StatCard 
@@ -127,6 +212,8 @@ const Dashboard = () => {
           icon="ri-exchange-dollar-line" 
           iconBgClass="bg-warning-50" 
           iconTextClass="text-warning-500"
+          sparklineData={transactionSparklineData}
+          sparklineColor="#f59e0b"
         />
         
         <StatCard 
@@ -149,6 +236,8 @@ const Dashboard = () => {
             icon="ri-file-list-3-line" 
             iconBgClass="bg-indigo-50" 
             iconTextClass="text-indigo-600"
+            sparklineData={transactionSparklineData.filter((_, i) => i > 20)}
+            sparklineColor="#4f46e5"
           />
           
           <StatCard 
@@ -157,6 +246,9 @@ const Dashboard = () => {
             icon="ri-money-dollar-box-line" 
             iconBgClass="bg-green-50" 
             iconTextClass="text-green-600"
+            sparklineData={gciSparklineData.filter((_, i) => i > 15)}
+            sparklineColor="#059669"
+            sparklineType="area"
           />
           
           <StatCard 
@@ -165,6 +257,9 @@ const Dashboard = () => {
             icon="ri-building-line" 
             iconBgClass="bg-cyan-50" 
             iconTextClass="text-cyan-600"
+            sparklineData={gciSparklineData.filter((_, i) => i > 10)}
+            sparklineColor="#0891b2"
+            sparklineType="area"
           />
           
           <StatCard 
@@ -173,6 +268,8 @@ const Dashboard = () => {
             icon="ri-calendar-check-line" 
             iconBgClass="bg-amber-50" 
             iconTextClass="text-amber-600"
+            sparklineData={transactionSparklineData.filter(d => d.value > 0).slice(-7)}
+            sparklineColor="#d97706"
           />
           
           <StatCard 
@@ -181,6 +278,8 @@ const Dashboard = () => {
             icon="ri-user-add-line" 
             iconBgClass="bg-rose-50" 
             iconTextClass="text-rose-600"
+            sparklineData={agentSparklineData.slice(-10)}
+            sparklineColor="#e11d48"
           />
         </div>
       </div>
