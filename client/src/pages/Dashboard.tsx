@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { AgentWithDownline, Agent, Transaction, RevenueShare } from "@shared/schema";
@@ -9,6 +9,7 @@ import AddTransactionForm from "@/components/forms/AddTransactionForm";
 import TransactionsTable from "@/components/transactions/TransactionsTable";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { format, startOfMonth, endOfMonth, isWithinInterval } from "date-fns";
 
 const Dashboard = () => {
   const [, navigate] = useLocation();
@@ -53,6 +54,33 @@ const Dashboard = () => {
         return sum + 1 + (agent.downline?.length || 0);
       }, 0) / (rootAgent.downline.length || 1)).toFixed(1)
     : "0.0";
+    
+  // Get current month date range
+  const now = new Date();
+  const currentMonthStart = startOfMonth(now);
+  const currentMonthEnd = endOfMonth(now);
+  
+  // Calculate pending transactions stats
+  const pendingTransactions = transactions?.filter(tx => tx.transactionStatus === 'pending') || [];
+  const pendingTransactionsCount = pendingTransactions.length;
+  
+  // Calculate total pending GCI and company GCI
+  const totalPendingGCI = pendingTransactions.reduce((sum, tx) => sum + ((tx.saleAmount * tx.commissionPercentage) / 100), 0);
+  const totalPendingCompanyGCI = pendingTransactions.reduce((sum, tx) => sum + (tx.companyGCI || 0), 0);
+  
+  // Calculate closings this month
+  const closingsThisMonth = transactions?.filter(tx => {
+    const txDate = new Date(tx.transactionDate);
+    return tx.transactionStatus === 'closed' && 
+           isWithinInterval(txDate, { start: currentMonthStart, end: currentMonthEnd });
+  }).length || 0;
+  
+  // Calculate new agents joined this month
+  const newAgentsThisMonth = agents?.filter(agent => {
+    if (!agent.createdAt) return false;
+    const createdAt = new Date(agent.createdAt);
+    return isWithinInterval(createdAt, { start: currentMonthStart, end: currentMonthEnd });
+  }).length || 0;
   
   // Handle adding a new recruit
   const handleAddRecruit = (sponsorId: number) => {
@@ -109,6 +137,52 @@ const Dashboard = () => {
           iconBgClass="bg-primary-50" 
           iconTextClass="text-primary-600"
         />
+      </div>
+      
+      {/* New Widgets - Additional Metrics */}
+      <div className="mb-8">
+        <h2 className="text-lg font-semibold text-gray-800 mb-3">Performance Metrics</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+          <StatCard 
+            title="Pending Transactions" 
+            value={pendingTransactionsCount} 
+            icon="ri-file-list-3-line" 
+            iconBgClass="bg-indigo-50" 
+            iconTextClass="text-indigo-600"
+          />
+          
+          <StatCard 
+            title="Pending GCI" 
+            value={`$${totalPendingGCI.toLocaleString()}`} 
+            icon="ri-money-dollar-box-line" 
+            iconBgClass="bg-green-50" 
+            iconTextClass="text-green-600"
+          />
+          
+          <StatCard 
+            title="Pending Company GCI" 
+            value={`$${totalPendingCompanyGCI.toLocaleString()}`} 
+            icon="ri-building-line" 
+            iconBgClass="bg-cyan-50" 
+            iconTextClass="text-cyan-600"
+          />
+          
+          <StatCard 
+            title={`Closings in ${format(now, 'MMMM')}`} 
+            value={closingsThisMonth} 
+            icon="ri-calendar-check-line" 
+            iconBgClass="bg-amber-50" 
+            iconTextClass="text-amber-600"
+          />
+          
+          <StatCard 
+            title="New Agents This Month" 
+            value={newAgentsThisMonth} 
+            icon="ri-user-add-line" 
+            iconBgClass="bg-rose-50" 
+            iconTextClass="text-rose-600"
+          />
+        </div>
       </div>
       
       {/* Quick Actions */}
