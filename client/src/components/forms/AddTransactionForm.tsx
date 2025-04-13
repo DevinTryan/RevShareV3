@@ -178,12 +178,22 @@ const AddTransactionForm = ({ onTransactionAdded }: AddTransactionFormProps) => 
       // Convert string date to ISO format and exclude fields not needed in database
       const { manualCommission, totalCommission, ...rest } = data;
       
+      // Ensure companyGCI is set correctly
+      let gciValue = isManualCommission ? data.companyGCI : companyGci;
+      
+      // Fallback calculation in case companyGCI wasn't set
+      if (!gciValue && data.saleAmount && data.commissionPercentage) {
+        const commission = (data.saleAmount * data.commissionPercentage) / 100;
+        gciValue = commission * 0.15; // 15% of commission is company GCI
+      }
+      
       const formattedData = {
         ...rest,
         transactionDate: new Date(data.transactionDate).toISOString(),
-        companyGCI: isManualCommission ? manualCompanyGCI : companyGci
+        companyGCI: gciValue
       };
       
+      console.log("Submitting transaction:", formattedData);
       const response = await apiRequest('POST', '/api/transactions', formattedData);
       return response.json();
     },

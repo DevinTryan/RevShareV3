@@ -33,7 +33,7 @@ export const transactions = pgTable("transactions", {
   propertyAddress: text("property_address").notNull(),
   saleAmount: doublePrecision("sale_amount").notNull(),
   commissionPercentage: doublePrecision("commission_percentage").notNull(),
-  companyGCI: doublePrecision("company_gci").notNull(), // 15% of total commission
+  companyGCI: doublePrecision("company_gci").notNull().default(0), // 15% of total commission
   transactionDate: timestamp("transaction_date").notNull(),
   createdAt: timestamp("created_at").defaultNow(),
 });
@@ -63,9 +63,17 @@ export const insertTransactionSchema = createInsertSchema(transactions)
   .omit({ id: true, createdAt: true })
   .extend({
     transactionDate: z.coerce.date(),
-    saleAmount: z.number().positive(),
-    commissionPercentage: z.number().positive(),
-    companyGCI: z.number().positive()
+    saleAmount: z.number().positive({ message: "Sale amount must be positive" }),
+    commissionPercentage: z.number().positive({ message: "Commission percentage must be positive" }),
+    companyGCI: z.number().optional().transform(val => val || undefined)
+  })
+  .transform(data => {
+    // If companyGCI is not provided, calculate it from saleAmount and commissionPercentage
+    if (data.companyGCI === undefined && data.saleAmount && data.commissionPercentage) {
+      const commission = (data.saleAmount * data.commissionPercentage) / 100;
+      data.companyGCI = commission * 0.15; // 15% of commission is company GCI
+    }
+    return data;
   });
 
 export const insertRevenueShareSchema = createInsertSchema(revenueShares)
