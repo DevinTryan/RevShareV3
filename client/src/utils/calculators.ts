@@ -1,4 +1,4 @@
-import { AgentType, Agent } from "@shared/schema";
+import { AgentType, Agent, CapType, LeadSource, SupportAgentTier } from "@shared/schema";
 
 // Calculate commission based on sale amount and percentage
 export function calculateCommission(saleAmount: number, commissionPercentage: number): number {

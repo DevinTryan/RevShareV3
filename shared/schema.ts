@@ -14,6 +14,35 @@ export enum CapType {
   TEAM = "team" // $8,000
 }
 
+// Lead source categories
+export enum LeadSource {
+  SELF_GENERATED = "self_generated",
+  COMPANY_PROVIDED = "company_provided",
+  REFERRAL = "referral",
+  SOI = "soi",
+  ZILLOW = "zillow",
+  GOOGLE = "google",
+  FACEBOOK = "facebook",
+  INSTAGRAM = "instagram",
+  OPEN_HOUSE = "open_house",
+  EXPIRED = "expired",
+  PAST_CLIENT = "past_client",
+  OTHER = "other"
+}
+
+// Tiers for Support Agents based on sales volume
+export enum SupportAgentTier {
+  TIER_1 = 1, // 0-$40,000 - 50%
+  TIER_2 = 2, // $40,000-$80,000 - 60%
+  TIER_3 = 3, // $80,000-$150,000 - 70%
+  TIER_4 = 4, // $150,000-$225,000 - 75%
+  TIER_5 = 5, // $225,000-$310,000 - 80%
+  TIER_6 = 6, // $310,000-$400,000 - 84%
+  TIER_7 = 7, // $400,000-$500,000 - 88%
+  TIER_8 = 8, // $500,000-$650,000 - 90%
+  TIER_9 = 9  // $650,000+ - 92%
+}
+
 // Agent table definition
 export const agents = pgTable("agents", {
   id: serial("id").primaryKey(),
@@ -24,6 +53,11 @@ export const agents = pgTable("agents", {
   anniversaryDate: timestamp("anniversary_date").notNull(),
   sponsorId: integer("sponsor_id").references(() => agents.id),
   createdAt: timestamp("created_at").defaultNow(),
+  // New fields for commission tracking
+  currentTier: integer("current_tier").default(1), // Current tier level for Support agents
+  totalSalesYTD: doublePrecision("total_sales_ytd").default(0), // Total sales this year
+  totalGCIYTD: doublePrecision("total_gci_ytd").default(0), // Total GCI this year
+  careerSalesCount: integer("career_sales_count").default(0), // Number of career sales
 });
 
 // Transaction table definition
@@ -33,9 +67,21 @@ export const transactions = pgTable("transactions", {
   propertyAddress: text("property_address").notNull(),
   saleAmount: doublePrecision("sale_amount").notNull(),
   commissionPercentage: doublePrecision("commission_percentage").notNull(),
-  companyGCI: doublePrecision("company_gci").notNull().default(0), // 15% of total commission
+  companyGCI: doublePrecision("company_gci").notNull().default(0),
   transactionDate: timestamp("transaction_date").notNull(),
   createdAt: timestamp("created_at").defaultNow(),
+  // New fields for commission and lead tracking
+  clientName: text("client_name"),
+  transactionType: text("transaction_type").default("buyer"), // buyer or seller
+  leadSource: text("lead_source").$type<LeadSource>(),
+  isCompanyProvided: boolean("is_company_provided").default(false),
+  isSelfGenerated: boolean("is_self_generated").default(true),
+  agentCommissionPercentage: doublePrecision("agent_commission_percentage"), // % commission that goes to agent
+  agentCommissionAmount: doublePrecision("agent_commission_amount"), // actual $ amount to agent
+  referralPercentage: doublePrecision("referral_percentage").default(0), // if referral, what %
+  referralAmount: doublePrecision("referral_amount").default(0), // $ paid in referral
+  showingAgentId: integer("showing_agent_id").references(() => agents.id), // if there was a showing agent
+  showingAgentFee: doublePrecision("showing_agent_fee").default(0), // $ paid to showing agent
 });
 
 // Revenue share table definition
@@ -56,7 +102,11 @@ export const insertAgentSchema = createInsertSchema(agents)
     agentType: z.enum([AgentType.PRINCIPAL, AgentType.SUPPORT]),
     capType: z.enum([CapType.STANDARD, CapType.TEAM]).optional(),
     sponsorId: z.number().optional(),
-    anniversaryDate: z.coerce.date()
+    anniversaryDate: z.coerce.date(),
+    currentTier: z.number().min(1).max(9).optional(),
+    totalSalesYTD: z.number().nonnegative().optional(),
+    totalGCIYTD: z.number().nonnegative().optional(),
+    careerSalesCount: z.number().nonnegative().optional()
   });
 
 export const insertTransactionSchema = createInsertSchema(transactions)
@@ -65,14 +115,51 @@ export const insertTransactionSchema = createInsertSchema(transactions)
     transactionDate: z.coerce.date(),
     saleAmount: z.number().positive({ message: "Sale amount must be positive" }),
     commissionPercentage: z.number().positive({ message: "Commission percentage must be positive" }),
-    companyGCI: z.number().optional().transform(val => val || undefined)
+    companyGCI: z.number().optional().transform(val => val || undefined),
+    // New fields
+    clientName: z.string().optional(),
+    transactionType: z.enum(["buyer", "seller"]).default("buyer"),
+    leadSource: z.nativeEnum(LeadSource).optional(),
+    isCompanyProvided: z.boolean().optional(),
+    isSelfGenerated: z.boolean().optional(),
+    agentCommissionPercentage: z.number().optional(),
+    agentCommissionAmount: z.number().optional(),
+    referralPercentage: z.number().min(0).max(100).optional(),
+    referralAmount: z.number().nonnegative().optional(),
+    showingAgentId: z.number().optional(),
+    showingAgentFee: z.number().nonnegative().optional()
   })
   .transform(data => {
     // If companyGCI is not provided, calculate it from saleAmount and commissionPercentage
-    if (data.companyGCI === undefined && data.saleAmount && data.commissionPercentage) {
-      const commission = (data.saleAmount * data.commissionPercentage) / 100;
-      data.companyGCI = commission * 0.15; // 15% of commission is company GCI
+    const totalCommission = (data.saleAmount * data.commissionPercentage) / 100;
+    
+    if (data.companyGCI === undefined) {
+      // Calculate company split based on agent type and tier
+      // This is a simplified version - the actual calculation will be in the business logic
+      data.companyGCI = totalCommission * 0.15; // Default is 15% to company
     }
+    
+    // Calculate agent commission if not provided
+    if (data.agentCommissionAmount === undefined && data.agentCommissionPercentage) {
+      data.agentCommissionAmount = totalCommission * (data.agentCommissionPercentage / 100);
+    } else if (data.agentCommissionAmount === undefined) {
+      // Default agent commission is total commission minus company GCI and any referral amount
+      data.agentCommissionAmount = totalCommission - data.companyGCI - (data.referralAmount || 0);
+    }
+    
+    // Set lead source flags automatically based on leadSource if not explicitly set
+    if (data.isCompanyProvided === undefined && data.leadSource) {
+      data.isCompanyProvided = [
+        LeadSource.COMPANY_PROVIDED, 
+        LeadSource.ZILLOW, 
+        LeadSource.GOOGLE
+      ].includes(data.leadSource);
+    }
+    
+    if (data.isSelfGenerated === undefined) {
+      data.isSelfGenerated = !data.isCompanyProvided;
+    }
+    
     return data;
   });
 
