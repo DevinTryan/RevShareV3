@@ -162,8 +162,8 @@ const AgentsPage = () => {
                     <div className="col-span-2 mt-2">
                       <div className="text-gray-600 mb-1">Current Tier:</div>
                       <TierInfoCard 
-                        gciYtd={agent.totalGCIYTD || 0} 
-                        currentTier={agent.currentTier || 1}
+                        gciYtd={(agent as any).totalGCIYTD || 0} 
+                        currentTier={(agent as any).currentTier || 1}
                         compact={true}
                       />
                     </div>

@@ -298,8 +298,8 @@ const EditAgentForm = ({ agent, onClose }: EditAgentFormProps) => {
                 
                 <div className="p-4 bg-gray-50 rounded-lg">
                   <TierInfoCard 
-                    gciYtd={agent.totalGCIYTD || 0} 
-                    currentTier={agent.currentTier || 1}
+                    gciYtd={(agent as any).totalGCIYTD || 0} 
+                    currentTier={(agent as any).currentTier || 1}
                     compact={false}
                   />
                 </div>
