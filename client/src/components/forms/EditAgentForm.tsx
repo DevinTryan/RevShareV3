@@ -18,6 +18,8 @@ import {
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import TierInfoCard from "@/components/agents/TierInfoCard";
+import { Separator } from "@/components/ui/separator";
 
 const editAgentSchema = z.object({
   name: z.string().min(2, { message: "Name must be at least 2 characters" }),
@@ -282,6 +284,35 @@ const EditAgentForm = ({ agent, onClose }: EditAgentFormProps) => {
               </FormItem>
             )}
           />
+
+          {/* Tier Information Section - Only visible for Support Agents */}
+          {agent.agentType === 'support' && (
+            <>
+              <Separator className="my-6" />
+              
+              <div className="space-y-4">
+                <h3 className="text-lg font-medium">Support Agent Tier Information</h3>
+                <p className="text-sm text-gray-500">
+                  Based on the agent's YTD GCI performance, they qualify for the following tier:
+                </p>
+                
+                <div className="p-4 bg-gray-50 rounded-lg">
+                  <TierInfoCard 
+                    gciYtd={agent.totalGCIYTD || 0} 
+                    currentTier={agent.currentTier || 1}
+                    compact={false}
+                  />
+                </div>
+                
+                <p className="text-xs text-gray-500">
+                  Tier levels are automatically calculated based on total YTD GCI. 
+                  Higher tiers provide better commission splits for the agent.
+                </p>
+              </div>
+              
+              <Separator className="my-6" />
+            </>
+          )}
 
           <div className="flex flex-col-reverse md:flex-row justify-between pt-4">
             <Button
