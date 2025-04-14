@@ -91,14 +91,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/agents", requireAdmin, async (req: Request, res: Response) => {
     try {
-      const agentData = insertAgentSchema.parse(req.body);
+      // Get the data
+      const rawData = req.body;
+      console.log("Creating agent with data:", JSON.stringify(rawData, null, 2));
+
+      // Process anniversary date before validation
+      if (rawData.anniversaryDate && typeof rawData.anniversaryDate === 'string') {
+        try {
+          console.log("Original anniversaryDate:", rawData.anniversaryDate);
+          // If it's just a date without time, add the time portion
+          if (rawData.anniversaryDate.length <= 10) {
+            rawData.anniversaryDate = new Date(rawData.anniversaryDate + "T00:00:00.000Z");
+          } else {
+            rawData.anniversaryDate = new Date(rawData.anniversaryDate);
+          }
+          console.log("Converted anniversaryDate:", rawData.anniversaryDate);
+        } catch (dateError) {
+          console.error("Error converting anniversaryDate:", dateError);
+          return res.status(400).json({
+            message: "Invalid date format for anniversaryDate. Please use YYYY-MM-DD format."
+          });
+        }
+      }
+
+      const agentData = insertAgentSchema.parse(rawData);
       const agent = await storage.createAgent(agentData);
+      
       res.status(201).json(agent);
     } catch (error) {
+      console.error("Error creating agent:", error);
+      
       if (error instanceof ZodError) {
         const validationError = fromZodError(error);
         return res.status(400).json({ message: validationError.message });
       }
+      
       res.status(500).json({ message: "Failed to create agent" });
     }
   });
@@ -127,9 +154,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Process the data before updating
       const processedData = { ...agentData };
       
-      // Convert anniversaryDate to a Date object if it's a string
+      // Convert anniversaryDate to a proper Date object if it's a string
       if (processedData.anniversaryDate && typeof processedData.anniversaryDate === 'string') {
-        processedData.anniversaryDate = new Date(processedData.anniversaryDate);
+        try {
+          console.log("Original anniversaryDate:", processedData.anniversaryDate);
+          // If it's just a date without time, add the time portion
+          if (processedData.anniversaryDate.length <= 10) {
+            processedData.anniversaryDate = new Date(processedData.anniversaryDate + "T00:00:00.000Z");
+          } else {
+            processedData.anniversaryDate = new Date(processedData.anniversaryDate);
+          }
+          console.log("Converted anniversaryDate:", processedData.anniversaryDate);
+        } catch (error) {
+          console.error("Error converting anniversaryDate:", error);
+          return res.status(400).json({
+            message: "Invalid date format for anniversaryDate. Please use YYYY-MM-DD format."
+          });
+        }
       }
       
       // Ensure gciSinceAnniversary is a number

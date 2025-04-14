@@ -51,10 +51,9 @@ const AddAgentForm = ({ onAgentAdded, preselectedSponsorId }: AddAgentFormProps)
 
   const createAgentMutation = useMutation({
     mutationFn: async (data: z.infer<typeof formSchema>) => {
-      // Convert string date to ISO format
+      // Just pass the data as is, let server handle conversion
       const formattedData = {
         ...data,
-        anniversaryDate: new Date(data.anniversaryDate).toISOString(),
       };
       
       // If support agent, remove capType
