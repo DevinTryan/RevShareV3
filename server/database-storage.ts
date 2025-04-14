@@ -42,6 +42,27 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createAgent(insertAgent: InsertAgent): Promise<Agent> {
+    // Generate a unique 6-digit agent code if not provided
+    if (!insertAgent.agentCode) {
+      // Get the highest existing agent code to determine the next one
+      const result = await db.select({ maxCode: sql`MAX(${agents.agentCode})` }).from(agents);
+      let nextCode = 1; // Default to 1 if no agents exist yet
+      
+      if (result.length > 0 && result[0].maxCode) {
+        // Parse the max code and increment it
+        const currentMax = parseInt(result[0].maxCode, 10);
+        nextCode = isNaN(currentMax) ? 1 : currentMax + 1;
+      }
+      
+      // Format to 6 digits with leading zeros
+      insertAgent.agentCode = nextCode.toString().padStart(6, '0');
+    }
+    
+    // Set initial GCI since anniversary to 0 if not provided
+    if (insertAgent.gciSinceAnniversary === undefined) {
+      insertAgent.gciSinceAnniversary = 0;
+    }
+    
     const result = await db.insert(agents).values(insertAgent).returning();
     return result[0];
   }

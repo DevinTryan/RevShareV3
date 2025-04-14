@@ -19,6 +19,9 @@ const formSchema = z.object({
   sponsorId: z.number().optional(),
   capType: z.enum([CapType.STANDARD, CapType.TEAM]).optional(),
   anniversaryDate: z.string(),
+  // Agent code is auto-generated on the server
+  agentCode: z.string().length(6).optional(),
+  gciSinceAnniversary: z.number().nonnegative().optional(),
 });
 
 interface AddAgentFormProps {

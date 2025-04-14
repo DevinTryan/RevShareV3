@@ -272,7 +272,8 @@ export const insertUserSchema = createInsertSchema(users)
     email: z.string().email({ message: "Invalid email address" }),
     // Agent ID is optional for admin users, required for agent users
     agentId: z.number().optional().superRefine((val, ctx) => {
-      if (ctx.data?.role === UserRole.AGENT && !val) {
+      const data = ctx.path[ctx.path.length - 2] as { role?: UserRole };
+      if (data?.role === UserRole.AGENT && !val) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
           message: "Agent ID is required for users with agent role"

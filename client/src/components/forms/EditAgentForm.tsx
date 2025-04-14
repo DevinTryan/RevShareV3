@@ -25,6 +25,8 @@ const editAgentSchema = z.object({
   sponsorId: z.number().nullable(),
   capType: z.enum(["standard", "team"]).nullable(),
   anniversaryDate: z.string(),
+  agentCode: z.string().length(6).optional(),
+  gciSinceAnniversary: z.number().nonnegative().optional(),
 });
 
 interface EditAgentFormProps {
@@ -49,6 +51,8 @@ const EditAgentForm = ({ agent, onClose }: EditAgentFormProps) => {
       sponsorId: agent.sponsorId,
       capType: agent.capType as CapType,
       anniversaryDate: new Date(agent.anniversaryDate).toISOString().split('T')[0],
+      agentCode: agent.agentCode || undefined,
+      gciSinceAnniversary: agent.gciSinceAnniversary || 0,
     },
   });
 
