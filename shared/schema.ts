@@ -53,10 +53,12 @@ export enum UserRole {
 export const agents = pgTable("agents", {
   id: serial("id").primaryKey(),
   name: text("name").notNull(),
+  agentCode: text("agent_code").unique(), // Unique 6-digit agent ID code (000001, etc.)
   agentType: text("agent_type").notNull().$type<AgentType>(),
   capType: text("cap_type").$type<CapType>(),
   currentCap: doublePrecision("current_cap").default(0),
   anniversaryDate: timestamp("anniversary_date").notNull(),
+  gciSinceAnniversary: doublePrecision("gci_since_anniversary").default(0), // GCI earned since anniversary date
   sponsorId: integer("sponsor_id").references((): any => agents.id),
   createdAt: timestamp("created_at").defaultNow(),
   // New fields for commission tracking
@@ -175,10 +177,12 @@ export const users = pgTable("users", {
 export const insertAgentSchema = createInsertSchema(agents)
   .omit({ id: true, createdAt: true })
   .extend({
+    agentCode: z.string().length(6).optional(), // 6-digit agent code will be auto-generated if not provided
     agentType: z.enum([AgentType.PRINCIPAL, AgentType.SUPPORT]),
     capType: z.enum([CapType.STANDARD, CapType.TEAM]).optional(),
     sponsorId: z.number().optional(),
     anniversaryDate: z.coerce.date(),
+    gciSinceAnniversary: z.number().nonnegative().optional(),
     currentTier: z.number().min(1).max(9).optional(),
     totalSalesYTD: z.number().nonnegative().optional(),
     totalGCIYTD: z.number().nonnegative().optional(),
@@ -267,13 +271,13 @@ export const insertUserSchema = createInsertSchema(users)
     }),
     email: z.string().email({ message: "Invalid email address" }),
     // Agent ID is optional for admin users, required for agent users
-    agentId: z.number().optional().refine((val: number | undefined, ctx: { data?: { role?: UserRole } }) => {
+    agentId: z.number().optional().superRefine((val, ctx) => {
       if (ctx.data?.role === UserRole.AGENT && !val) {
-        return false;
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Agent ID is required for users with agent role"
+        });
       }
-      return true;
-    }, {
-      message: "Agent ID is required for users with agent role"
     })
   });
 
