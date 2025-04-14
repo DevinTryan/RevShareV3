@@ -9,6 +9,7 @@ import EditAgentForm from "@/components/forms/EditAgentForm";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { format } from "date-fns";
 import AgentDownlineTree from "@/components/dashboard/AgentDownlineTree";
+import TierInfoCard from "@/components/agents/TierInfoCard";
 
 const AgentsPage = () => {
   const [isAddAgentDialogOpen, setIsAddAgentDialogOpen] = useState(false);
@@ -156,6 +157,17 @@ const AgentsPage = () => {
                   <div className="text-gray-900">
                     {agent.createdAt ? format(new Date(agent.createdAt), 'MMM dd, yyyy') : 'N/A'}
                   </div>
+
+                  {agent.agentType === 'support' && (
+                    <div className="col-span-2 mt-2">
+                      <div className="text-gray-600 mb-1">Current Tier:</div>
+                      <TierInfoCard 
+                        gciYtd={agent.totalGciYtd || 0} 
+                        currentTier={agent.currentTier || 1}
+                        compact={true}
+                      />
+                    </div>
+                  )}
                 </div>
                 
                 <div className="mt-4 flex justify-end space-x-2">
