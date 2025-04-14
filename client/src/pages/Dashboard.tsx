@@ -13,7 +13,7 @@ import {
   endOfMonth,
   isWithinInterval
 } from "date-fns";
-import { AddTransactionForm } from '@/components/forms/AddTransactionForm'; // Added import statement
+import AddTransactionForm from '@/components/forms/AddTransactionForm'; // Added import statement
 
 
 const Dashboard = () => {
