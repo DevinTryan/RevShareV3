@@ -58,9 +58,9 @@ const EditAgentForm = ({ agent, onClose }: EditAgentFormProps) => {
 
   const updateAgentMutation = useMutation({
     mutationFn: async (data: z.infer<typeof editAgentSchema>) => {
+      // The server will handle the conversion from string to Date
       const formattedData = {
         ...data,
-        anniversaryDate: new Date(data.anniversaryDate).toISOString(),
       };
       
       console.log('Sending agent update:', formattedData);

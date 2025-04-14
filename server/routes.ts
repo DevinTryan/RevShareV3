@@ -124,8 +124,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
       
+      // Process the data before updating
+      const processedData = { ...agentData };
+      
+      // Convert anniversaryDate to a Date object if it's a string
+      if (processedData.anniversaryDate && typeof processedData.anniversaryDate === 'string') {
+        processedData.anniversaryDate = new Date(processedData.anniversaryDate);
+      }
+      
+      // Ensure gciSinceAnniversary is a number
+      if (processedData.gciSinceAnniversary !== undefined) {
+        processedData.gciSinceAnniversary = Number(processedData.gciSinceAnniversary);
+      }
+      
       // Attempt to update
-      const updatedAgent = await storage.updateAgent(id, agentData);
+      const updatedAgent = await storage.updateAgent(id, processedData);
       
       if (!updatedAgent) {
         return res.status(500).json({ message: "Failed to update agent" });
