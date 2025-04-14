@@ -75,6 +75,9 @@ const AgentDownlineTree = ({ rootAgent, isLoading, onAddRecruit }: AgentDownline
                 <Badge variant={agent.agentType === AgentType.PRINCIPAL ? 'principal' : 'support'} className="mr-2">
                   {agent.agentType === AgentType.PRINCIPAL ? 'Principal' : 'Support'}
                 </Badge>
+                <span className="font-mono mr-2">
+                  {agent.agentCode || '------'}
+                </span>
                 <span>
                   {agent.agentType === AgentType.PRINCIPAL 
                     ? `$${(agent.currentCap || 0).toLocaleString()}/${agent.capType === 'team' ? '8,000' : '16,000'}`

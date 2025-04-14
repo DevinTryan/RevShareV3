@@ -247,6 +247,42 @@ const EditAgentForm = ({ agent, onClose }: EditAgentFormProps) => {
             )}
           />
 
+          <FormField
+            control={form.control}
+            name="agentCode"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Agent ID Code</FormLabel>
+                <FormControl>
+                  <Input {...field} placeholder="000000" readOnly />
+                </FormControl>
+                <FormMessage />
+                <p className="text-xs text-gray-500">This is a unique 6-digit ID code automatically assigned to the agent.</p>
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="gciSinceAnniversary"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>GCI Earned Since Anniversary</FormLabel>
+                <FormControl>
+                  <Input 
+                    type="number" 
+                    {...field} 
+                    onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                    min="0"
+                    step="0.01"
+                  />
+                </FormControl>
+                <FormMessage />
+                <p className="text-xs text-gray-500">Total GCI earned since the agent's most recent anniversary date.</p>
+              </FormItem>
+            )}
+          />
+
           <div className="flex flex-col-reverse md:flex-row justify-between pt-4">
             <Button
               type="button"

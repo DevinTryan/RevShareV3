@@ -129,6 +129,11 @@ const AgentsPage = () => {
                 </div>
                 
                 <div className="mt-4 grid grid-cols-2 gap-2 text-sm">
+                  <div className="text-gray-600">Agent ID:</div>
+                  <div className="text-gray-900 font-mono">
+                    {agent.agentCode || '------'}
+                  </div>
+
                   <div className="text-gray-600">Anniversary:</div>
                   <div className="text-gray-900">
                     {format(new Date(agent.anniversaryDate), 'MMM dd, yyyy')}
@@ -140,6 +145,11 @@ const AgentsPage = () => {
                       ? `$${(agent.currentCap || 0).toLocaleString()} / $${agent.capType === 'team' ? '8,000' : '16,000'}`
                       : 'N/A'
                     }
+                  </div>
+
+                  <div className="text-gray-600">GCI Since Anniversary:</div>
+                  <div className="text-gray-900">
+                    ${(agent.gciSinceAnniversary || 0).toLocaleString()}
                   </div>
                   
                   <div className="text-gray-600">Added On:</div>
