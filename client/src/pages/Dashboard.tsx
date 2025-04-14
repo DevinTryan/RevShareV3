@@ -1,13 +1,10 @@
 import { useState } from "react";
 import { useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
-import { AgentWithDownline, Agent, Transaction, RevenueShare } from "@shared/schema";
+import { AgentWithDownline, Agent, RevenueShare } from "@shared/schema";
 import StatCard from "@/components/dashboard/StatCard";
 import AgentDownlineTree from "@/components/dashboard/AgentDownlineTree";
-import TransactionPipeline from "@/components/dashboard/TransactionPipeline";
 import AddAgentForm from "@/components/forms/AddAgentForm";
-import AddTransactionForm from "@/components/forms/AddTransactionForm";
-import TransactionsTable from "@/components/transactions/TransactionsTable";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { 
@@ -36,7 +33,7 @@ const Dashboard = () => {
   });
   
   // Fetch transactions (for stats)
-  const { data: transactions } = useQuery<Transaction[]>({
+  const { data: transactions } = useQuery({
     queryKey: ['/api/transactions'],
   });
 

@@ -4,7 +4,6 @@ import { queryClient } from "./lib/queryClient";
 import { Toaster } from "@/components/ui/toaster";
 import Dashboard from "@/pages/Dashboard";
 import AgentsPage from "@/pages/AgentsPage";
-import TransactionsPage from "@/pages/TransactionsPage";
 import SimpleTransactionsPage from "@/pages/simple-transactions-page";
 import SimpleTransactionPage from "@/pages/simple-transaction-page";
 import RevenueSharePage from "@/pages/RevenueSharePage";
@@ -94,13 +93,7 @@ function AppRoutes() {
           </AppLayout>
         </ProtectedRoute>
       </Route>
-      <Route path="/transactions">
-        <ProtectedRoute>
-          <AppLayout>
-            <TransactionsPage />
-          </AppLayout>
-        </ProtectedRoute>
-      </Route>
+
       <Route path="/revenue-share">
         <ProtectedRoute>
           <AppLayout>

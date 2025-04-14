@@ -16,8 +16,7 @@ const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
   const navItems = [
     { path: "/", label: "Dashboard", icon: "ri-dashboard-line" },
     { path: "/agents", label: "Agents", icon: "ri-user-line" },
-    { path: "/transactions", label: "Transactions", icon: "ri-exchange-dollar-line" },
-    { path: "/simple-transactions", label: "Simple Transactions", icon: "ri-file-list-3-line" },
+    { path: "/simple-transactions", label: "Transactions", icon: "ri-file-list-3-line" },
     { path: "/revenue-share", label: "Revenue Share", icon: "ri-money-dollar-circle-line" },
     { path: "/reports", label: "Reports", icon: "ri-bar-chart-line" },
     { path: "/settings", label: "Settings", icon: "ri-settings-line" },
