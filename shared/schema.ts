@@ -1,4 +1,4 @@
-import { pgTable, text, serial, integer, boolean, doublePrecision, timestamp, foreignKey, pgEnum } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, boolean, doublePrecision, timestamp, foreignKey, pgEnum, jsonb } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 import { CONFIG } from "./config";
@@ -54,8 +54,9 @@ export enum SupportAgentTier {
 
 // User roles
 export enum UserRole {
-  ADMIN = "admin",
-  AGENT = "agent"
+  ADMIN = 'admin',
+  AGENT = 'agent',
+  VIEWER = 'viewer'
 }
 
 // Agent table definition
@@ -219,6 +220,46 @@ export const auditLogs = pgTable("audit_logs", {
   userAgent: text("user_agent")
 });
 
+// History tracking tables
+export const dataHistory = pgTable('data_history', {
+  id: serial('id').primaryKey(),
+  entityType: text('entity_type').notNull(),
+  entityId: integer('entity_id').notNull(),
+  userId: integer('user_id').notNull(),
+  action: text('action').notNull(),
+  timestamp: timestamp('timestamp').defaultNow().notNull(),
+  previousState: jsonb('previous_state'),
+  newState: jsonb('new_state'),
+  metadata: jsonb('metadata')
+});
+
+export const userHistory = pgTable('user_history', {
+  id: serial('id').primaryKey(),
+  userId: integer('user_id').references(() => users.id).notNull(),
+  action: text('action').notNull(),
+  timestamp: timestamp('timestamp').defaultNow().notNull(),
+  changes: jsonb('changes'),
+  performedBy: integer('performed_by').references(() => users.id).notNull()
+});
+
+export const agentHistory = pgTable('agent_history', {
+  id: serial('id').primaryKey(),
+  agentId: integer('agent_id').references(() => agents.id).notNull(),
+  action: text('action').notNull(),
+  timestamp: timestamp('timestamp').defaultNow().notNull(),
+  changes: jsonb('changes'),
+  performedBy: integer('performed_by').references(() => users.id).notNull()
+});
+
+export const transactionHistory = pgTable('transaction_history', {
+  id: serial('id').primaryKey(),
+  transactionId: integer('transaction_id').references(() => transactions.id).notNull(),
+  action: text('action').notNull(),
+  timestamp: timestamp('timestamp').defaultNow().notNull(),
+  changes: jsonb('changes'),
+  performedBy: integer('performed_by').references(() => users.id).notNull()
+});
+
 // Insert schemas with validation
 export const insertAgentSchema = createInsertSchema(agents)
   .omit({ id: true, createdAt: true, lastModifiedBy: true, lastModifiedAt: true })
@@ -304,6 +345,45 @@ export const insertAuditLogSchema = createInsertSchema(auditLogs)
     userAgent: z.string().optional()
   });
 
+export const insertDataHistorySchema = createInsertSchema(dataHistory)
+  .omit({ id: true, timestamp: true })
+  .extend({
+    entityType: z.string(),
+    entityId: z.number(),
+    userId: z.number(),
+    action: z.string(),
+    previousState: z.string().optional(),
+    newState: z.string().optional(),
+    metadata: z.string().optional()
+  });
+
+export const insertUserHistorySchema = createInsertSchema(userHistory)
+  .omit({ id: true, timestamp: true })
+  .extend({
+    userId: z.number(),
+    action: z.string(),
+    changes: z.string(),
+    performedBy: z.number()
+  });
+
+export const insertAgentHistorySchema = createInsertSchema(agentHistory)
+  .omit({ id: true, timestamp: true })
+  .extend({
+    agentId: z.number(),
+    action: z.string(),
+    changes: z.string(),
+    performedBy: z.number()
+  });
+
+export const insertTransactionHistorySchema = createInsertSchema(transactionHistory)
+  .omit({ id: true, timestamp: true })
+  .extend({
+    transactionId: z.number(),
+    action: z.string(),
+    changes: z.string(),
+    performedBy: z.number()
+  });
+
 // Types
 export type Agent = typeof agents.$inferSelect;
 export type InsertAgent = z.infer<typeof insertAgentSchema>;
@@ -319,6 +399,11 @@ export type InsertUser = z.infer<typeof insertUserSchema>;
 
 export type AuditLog = typeof auditLogs.$inferSelect;
 export type InsertAuditLog = z.infer<typeof insertAuditLogSchema>;
+
+export type InsertDataHistory = typeof dataHistory.$inferInsert;
+export type InsertUserHistory = typeof userHistory.$inferInsert;
+export type InsertAgentHistory = typeof agentHistory.$inferInsert;
+export type InsertTransactionHistory = typeof transactionHistory.$inferInsert;
 
 export interface AgentWithDownline extends Agent {
   downline?: AgentWithDownline[];

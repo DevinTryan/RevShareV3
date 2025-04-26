@@ -1,0 +1,164 @@
+.admin-history {
+  padding: 2rem;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.title {
+  font-size: 2rem;
+  font-weight: bold;
+  margin-bottom: 2rem;
+  color: #2d3748;
+}
+
+.message {
+  padding: 1rem;
+  border-radius: 0.375rem;
+  margin-bottom: 1rem;
+}
+
+.message.error {
+  background-color: #fed7d7;
+  color: #c53030;
+  border: 1px solid #fc8181;
+}
+
+.message.success {
+  background-color: #c6f6d5;
+  color: #2f855a;
+  border: 1px solid #68d391;
+}
+
+.controls {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+  margin-bottom: 2rem;
+}
+
+.control-group h2 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin-bottom: 1rem;
+  color: #4a5568;
+}
+
+.control-row {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+}
+
+.select,
+.input {
+  padding: 0.5rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.375rem;
+  width: 200px;
+  font-size: 1rem;
+}
+
+.select:focus,
+.input:focus {
+  outline: none;
+  border-color: #4299e1;
+  box-shadow: 0 0 0 1px #4299e1;
+}
+
+.button {
+  padding: 0.5rem 1rem;
+  border-radius: 0.375rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  border: none;
+  color: white;
+}
+
+.button:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.button.primary {
+  background-color: #4299e1;
+}
+
+.button.primary:hover:not(:disabled) {
+  background-color: #3182ce;
+}
+
+.button.secondary {
+  background-color: #48bb78;
+}
+
+.button.secondary:hover:not(:disabled) {
+  background-color: #38a169;
+}
+
+.table-container {
+  overflow-x: auto;
+  margin-top: 2rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.5rem;
+}
+
+.history-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+}
+
+.history-table th {
+  background-color: #f7fafc;
+  padding: 1rem;
+  text-align: left;
+  font-weight: 600;
+  color: #4a5568;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.history-table td {
+  padding: 1rem;
+  border-bottom: 1px solid #e2e8f0;
+  color: #2d3748;
+}
+
+.history-table tr:last-child td {
+  border-bottom: none;
+}
+
+.badge {
+  display: inline-block;
+  padding: 0.25rem 0.5rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.badge.green {
+  background-color: #c6f6d5;
+  color: #2f855a;
+}
+
+.badge.blue {
+  background-color: #bee3f8;
+  color: #2c5282;
+}
+
+.badge.red {
+  background-color: #fed7d7;
+  color: #c53030;
+}
+
+.badge.gray {
+  background-color: #edf2f7;
+  color: #4a5568;
+}
+
+.changes-cell {
+  max-width: 300px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: pre-wrap;
+} 

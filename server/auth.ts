@@ -7,10 +7,26 @@ import { promisify } from "util";
 import { storage } from "./storage";
 import { User, UserRole } from "../shared/schema";
 import { z } from 'zod';
+import { db } from './db';
+import { eq } from 'drizzle-orm';
+import { comparePassword } from './security';
 
 declare global {
   namespace Express {
-    interface User extends User {}
+    interface User {
+      id: number;
+      username: string;
+      email: string;
+      role: UserRole;
+      agentId?: number | null;
+      createdAt: Date;
+      lastLogin: Date | null;
+      failedLoginAttempts: number;
+      isLocked: boolean;
+      lockExpiresAt: Date | null;
+      resetToken: string | null;
+      resetTokenExpiry: Date | null;
+    }
   }
 }
 
@@ -64,24 +80,26 @@ export function setupAuth(app: Express) {
 
   // Configure Local Strategy
   passport.use(
-    new LocalStrategy(async (username, password, done) => {
+    new LocalStrategy(async (username: string, password: string, done: any) => {
       try {
-        const user = await storage.getUserByUsername(username);
-        
-        if (!user) {
-          return done(null, false, { message: "Invalid username or password" });
+        const result = await db
+          .select()
+          .from(users)
+          .where(eq(users.username, username))
+          .limit(1);
+
+        if (result.length === 0) {
+          return done(null, false, { message: 'Invalid username or password' });
         }
-        
-        if (!(await comparePasswords(password, user.password))) {
-          return done(null, false, { message: "Invalid username or password" });
+
+        const user = result[0];
+        const isMatch = await comparePassword(password, user.password);
+
+        if (!isMatch) {
+          return done(null, false, { message: 'Invalid username or password' });
         }
-        
-        // Update last login time
-        await storage.updateUser(user.id, { 
-          lastLogin: new Date() 
-        });
-        
-        return done(null, user);
+
+        return done(null, user as Express.User);
       } catch (error) {
         return done(error);
       }
@@ -89,16 +107,25 @@ export function setupAuth(app: Express) {
   );
 
   // Serialization
-  passport.serializeUser((user: User, done) => {
+  passport.serializeUser((user: Express.User, done) => {
     done(null, user.id);
   });
 
   passport.deserializeUser(async (id: number, done) => {
     try {
-      const user = await storage.getUser(id);
-      done(null, user);
+      const result = await db
+        .select()
+        .from(users)
+        .where(eq(users.id, id))
+        .limit(1);
+
+      if (result.length === 0) {
+        return done(new Error('User not found'));
+      }
+
+      done(null, result[0] as Express.User);
     } catch (error) {
-      done(error, null);
+      done(error);
     }
   });
 
