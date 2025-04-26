@@ -1,6 +1,7 @@
 import { pgTable, text, serial, integer, boolean, doublePrecision, timestamp, foreignKey, pgEnum } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
+import { CONFIG } from "./config";
 
 // Agent types
 export enum AgentType {
@@ -12,6 +13,14 @@ export enum AgentType {
 export enum CapType {
   STANDARD = "standard", // $16,000
   TEAM = "team" // $8,000
+}
+
+// Agent status
+export enum AgentStatus {
+  ACTIVE = "active",
+  INACTIVE = "inactive",
+  ON_LEAVE = "on_leave",
+  TERMINATED = "terminated"
 }
 
 // Lead source categories
@@ -66,6 +75,12 @@ export const agents = pgTable("agents", {
   totalSalesYTD: doublePrecision("total_sales_ytd").default(0), // Total sales this year
   totalGCIYTD: doublePrecision("total_gci_ytd").default(0), // Total GCI this year
   careerSalesCount: integer("career_sales_count").default(0), // Number of career sales
+  // New fields for agent status and audit
+  status: text("status").notNull().$type<AgentStatus>().default(AgentStatus.ACTIVE),
+  statusChangeDate: timestamp("status_change_date"),
+  statusChangeReason: text("status_change_reason"),
+  lastModifiedBy: integer("last_modified_by").references((): any => users.id),
+  lastModifiedAt: timestamp("last_modified_at").defaultNow()
 });
 
 // Transaction table definition
@@ -146,6 +161,15 @@ export const transactions = pgTable("transactions", {
   
   // Archived fields for deleted agents
   agentNameArchived: text("agent_name_archived"), // Keeps agent name after deletion
+  
+  // New fields for audit and validation
+  lastModifiedBy: integer("last_modified_by").references(() => users.id),
+  lastModifiedAt: timestamp("last_modified_at").defaultNow(),
+  validationErrors: text("validation_errors"), // JSON string of validation errors
+  isDisputed: boolean("is_disputed").default(false),
+  disputeReason: text("dispute_reason"),
+  disputeResolvedAt: timestamp("dispute_resolved_at"),
+  disputeResolvedBy: integer("dispute_resolved_by").references(() => users.id)
 });
 
 // Revenue share table definition
@@ -157,13 +181,16 @@ export const revenueShares = pgTable("revenue_shares", {
   amount: doublePrecision("amount").notNull(),
   tier: integer("tier").notNull(), // 1-5 levels
   createdAt: timestamp("created_at").defaultNow(),
+  // New fields for audit
+  lastModifiedBy: integer("last_modified_by").references(() => users.id),
+  lastModifiedAt: timestamp("last_modified_at").defaultNow()
 });
 
 // Users table definition for authentication
 export const users = pgTable("users", {
   id: serial("id").primaryKey(),
   username: text("username").notNull().unique(),
-  password: text("password").notNull(),
+  password: text("password").notNull(), // Will be hashed
   email: text("email").notNull(),
   role: text("role").notNull().$type<UserRole>().default(UserRole.AGENT),
   agentId: integer("agent_id").references(() => agents.id),
@@ -171,13 +198,32 @@ export const users = pgTable("users", {
   lastLogin: timestamp("last_login"),
   resetToken: text("reset_token"),
   resetTokenExpiry: timestamp("reset_token_expiry"),
+  // New fields for security
+  failedLoginAttempts: integer("failed_login_attempts").default(0),
+  lastFailedLogin: timestamp("last_failed_login"),
+  isLocked: boolean("is_locked").default(false),
+  lockExpiresAt: timestamp("lock_expires_at")
 });
 
-// Insert schemas
+// New audit log table
+export const auditLogs = pgTable("audit_logs", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").references(() => users.id),
+  action: text("action").notNull(), // e.g., "create_agent", "update_transaction"
+  entityType: text("entity_type").notNull(), // e.g., "agent", "transaction"
+  entityId: integer("entity_id").notNull(),
+  oldValues: text("old_values"), // JSON string of old values
+  newValues: text("new_values"), // JSON string of new values
+  createdAt: timestamp("created_at").defaultNow(),
+  ipAddress: text("ip_address"),
+  userAgent: text("user_agent")
+});
+
+// Insert schemas with validation
 export const insertAgentSchema = createInsertSchema(agents)
-  .omit({ id: true, createdAt: true })
+  .omit({ id: true, createdAt: true, lastModifiedBy: true, lastModifiedAt: true })
   .extend({
-    agentCode: z.string().length(6).optional(), // 6-digit agent code will be auto-generated if not provided
+    agentCode: z.string().length(6).optional(),
     agentType: z.enum([AgentType.PRINCIPAL, AgentType.SUPPORT]),
     capType: z.enum([CapType.STANDARD, CapType.TEAM]).optional(),
     sponsorId: z.number().optional(),
@@ -186,100 +232,76 @@ export const insertAgentSchema = createInsertSchema(agents)
     currentTier: z.number().min(1).max(9).optional(),
     totalSalesYTD: z.number().nonnegative().optional(),
     totalGCIYTD: z.number().nonnegative().optional(),
-    careerSalesCount: z.number().nonnegative().optional()
+    careerSalesCount: z.number().nonnegative().optional(),
+    status: z.enum([
+      AgentStatus.ACTIVE,
+      AgentStatus.INACTIVE,
+      AgentStatus.ON_LEAVE,
+      AgentStatus.TERMINATED
+    ]).default(AgentStatus.ACTIVE)
   });
 
 export const insertTransactionSchema = createInsertSchema(transactions)
-  .omit({ id: true, createdAt: true })
+  .omit({ id: true, createdAt: true, lastModifiedBy: true, lastModifiedAt: true })
   .extend({
     transactionDate: z.coerce.date(),
-    saleAmount: z.number().positive({ message: "Sale amount must be positive" }),
-    commissionPercentage: z.number().positive({ message: "Commission percentage must be positive" }),
-    companyGCI: z.number().optional().transform(val => val || undefined),
-    // New fields
+    closeDate: z.coerce.date().optional(),
+    saleAmount: z.number()
+      .min(CONFIG.validation.minSaleAmount)
+      .max(CONFIG.validation.maxSaleAmount),
+    commissionPercentage: z.number().min(0).max(100),
+    companyGCI: z.number().nonnegative().optional(),
     clientName: z.string().optional(),
+    clientEmail: z.string().email().optional(),
+    clientPhone: z.string().optional(),
     transactionType: z.enum(["buyer", "seller"]).default("buyer"),
+    transactionStatus: z.enum(["pending", "closed", "cancelled"]).default("pending"),
     leadSource: z.nativeEnum(LeadSource).optional(),
-    isCompanyProvided: z.boolean().optional(),
-    isSelfGenerated: z.boolean().optional(),
-    agentCommissionPercentage: z.number().optional(),
-    agentCommissionAmount: z.number().optional(),
-    referralPercentage: z.number().min(0).max(100).optional(),
-    referralAmount: z.number().nonnegative().optional(),
-    showingAgentId: z.number().optional(),
-    showingAgentFee: z.number().nonnegative().optional(),
-    // Extended transaction fields
-    additionalAgentCost: z.number().min(0).optional(),
-    source: z.string().optional(),
-    companyName: z.string().optional(),
-    escrowOffice: z.string().optional(),
-    escrowOfficer: z.string().optional(),
-    referrer: z.string().optional(),
-    lender: z.string().optional(),
-    sellerCommissionPercentage: z.number().min(0).optional(),
-    buyerCommissionPercentage: z.number().min(0).optional(),
-    referralFee: z.number().min(0).optional(),
-    showingAgent: z.string().optional(),
-    teamAgentsIncome: z.number().min(0).optional(),
-    personalIncome: z.number().min(0).optional(),
-    actualCheckAmount: z.number().min(0).optional()
-  })
-  .transform(data => {
-    // If companyGCI is not provided, calculate it from saleAmount and commissionPercentage
-    const totalCommission = (data.saleAmount * data.commissionPercentage) / 100;
-    
-    if (data.companyGCI === undefined) {
-      // Calculate company split based on agent type and tier
-      // This is a simplified version - the actual calculation will be in the business logic
-      data.companyGCI = totalCommission * 0.15; // Default is 15% to company
-    }
-    
-    // Calculate agent commission if not provided
-    if (data.agentCommissionAmount === undefined && data.agentCommissionPercentage) {
-      data.agentCommissionAmount = totalCommission * (data.agentCommissionPercentage / 100);
-    } else if (data.agentCommissionAmount === undefined) {
-      // Default agent commission is total commission minus company GCI and any referral amount
-      data.agentCommissionAmount = totalCommission - data.companyGCI - (data.referralAmount || 0);
-    }
-    
-    // Set lead source flags automatically based on leadSource if not explicitly set
-    if (data.isCompanyProvided === undefined && data.leadSource) {
-      data.isCompanyProvided = [
-        LeadSource.COMPANY_PROVIDED, 
-        LeadSource.ZILLOW, 
-        LeadSource.GOOGLE
-      ].includes(data.leadSource);
-    }
-    
-    if (data.isSelfGenerated === undefined) {
-      data.isSelfGenerated = !data.isCompanyProvided;
-    }
-    
-    return data;
+    isCompanyProvided: z.boolean().default(false),
+    isSelfGenerated: z.boolean().default(true),
+    agentCommissionPercentage: z.number().min(0).max(100).optional(),
+    agentCommissionAmount: z.number().nonnegative().optional(),
+    referralPercentage: z.number().min(0).max(100).default(0),
+    referralAmount: z.number().nonnegative().default(0),
+    showingAgentFee: z.number().nonnegative().default(0),
+    officeGrossCommission: z.number().nonnegative().default(0),
+    transactionCoordinatorFee: z.number().nonnegative().default(0),
+    complianceFee: z.number().nonnegative().default(0),
+    depositAmount: z.number().nonnegative().default(0),
+    additionalAgentFee: z.number().nonnegative().default(0),
+    additionalAgentPercentage: z.number().min(0).max(100).default(0),
+    additionalAgentCost: z.number().nonnegative().default(0),
+    teamAgentsIncome: z.number().nonnegative().default(0),
+    personalIncome: z.number().nonnegative().default(0),
+    actualCheckAmount: z.number().nonnegative().default(0)
   });
 
 export const insertRevenueShareSchema = createInsertSchema(revenueShares)
-  .omit({ id: true, createdAt: true });
+  .omit({ id: true, createdAt: true, lastModifiedBy: true, lastModifiedAt: true })
+  .extend({
+    amount: z.number().nonnegative(),
+    tier: z.number().min(1).max(5)
+  });
 
 export const insertUserSchema = createInsertSchema(users)
-  .omit({ id: true, createdAt: true, lastLogin: true, resetToken: true, resetTokenExpiry: true })
+  .omit({ id: true, createdAt: true, failedLoginAttempts: true, lastFailedLogin: true, isLocked: true, lockExpiresAt: true })
   .extend({
-    role: z.nativeEnum(UserRole),
-    // Require strong password with at least 8 characters, including one uppercase, one lowercase, one number
-    password: z.string().min(8).regex(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).+$/, {
-      message: "Password must be at least 8 characters and include uppercase, lowercase, and number"
-    }),
-    email: z.string().email({ message: "Invalid email address" }),
-    // Agent ID is optional for admin users, required for agent users
-    agentId: z.number().optional().superRefine((val, ctx) => {
-      const data = ctx.path[ctx.path.length - 2] as { role?: UserRole };
-      if (data?.role === UserRole.AGENT && !val) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: "Agent ID is required for users with agent role"
-        });
-      }
-    })
+    username: z.string().min(3).max(50),
+    password: z.string().min(8),
+    email: z.string().email(),
+    role: z.enum([UserRole.ADMIN, UserRole.AGENT]).default(UserRole.AGENT)
+  });
+
+export const insertAuditLogSchema = createInsertSchema(auditLogs)
+  .omit({ id: true, createdAt: true })
+  .extend({
+    action: z.string(),
+    entityType: z.string(),
+    entityId: z.number(),
+    oldValues: z.string().optional(),
+    newValues: z.string().optional(),
+    ipAddress: z.string().optional(),
+    userAgent: z.string().optional()
   });
 
 // Types
@@ -295,7 +317,9 @@ export type InsertRevenueShare = z.infer<typeof insertRevenueShareSchema>;
 export type User = typeof users.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
 
-// Additional type for agent with downline information
+export type AuditLog = typeof auditLogs.$inferSelect;
+export type InsertAuditLog = z.infer<typeof insertAuditLogSchema>;
+
 export interface AgentWithDownline extends Agent {
   downline?: AgentWithDownline[];
   sponsor?: Agent;
