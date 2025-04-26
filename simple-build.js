@@ -11,7 +11,7 @@ try {
   
   // Build the client-side code
   console.log('Building client-side code...');
-  execSync('npx esbuild client/index.tsx --bundle --minify --outfile=dist/client.js', { stdio: 'inherit' });
+  execSync('npx esbuild client/src/main.tsx --bundle --minify --outfile=dist/client.js', { stdio: 'inherit' });
   
   // Copy any static assets
   console.log('Copying static assets...');
