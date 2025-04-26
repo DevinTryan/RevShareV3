@@ -14,7 +14,8 @@
     "db:push": "drizzle-kit push",
     "render:build": "vite build --base=/",
     "render:start": "node dist/index.js",
-    "render-custom-build": "node render-build.js"
+    "render-custom-build": "node render-build.js",
+    "simple-build": "node simple-build.js"
   },
   "dependencies": {
     "@chakra-ui/next-js": "^2.4.2",
