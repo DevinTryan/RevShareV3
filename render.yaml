@@ -1,0 +1,14 @@
+services:
+  - type: web
+    name: revenue-share-calculator-api
+    env: node
+    buildCommand: npm install && npm run build
+    startCommand: node dist/index.js
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        sync: false # Will be set manually in Render dashboard
+      - key: SESSION_SECRET
+        generateValue: true # Automatically generate a secure secret
+    healthCheckPath: /api/health

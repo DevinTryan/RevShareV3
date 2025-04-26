@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { ChakraProvider, defaultSystem } from '@chakra-ui/react';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { Switch, Route, useLocation, Redirect } from 'wouter';
@@ -19,7 +19,6 @@ import NotFound from './pages/not-found';
 import UsersPage from './pages/admin/UsersPage';
 import Sidebar from './components/layout/Sidebar';
 import MobileHeader from './components/layout/MobileHeader';
-import { useState } from 'react';
 import { Loader2 } from 'lucide-react';
 import { ProtectedRoute } from './lib/protected-route';
 import { AdminHistory } from './components/AdminHistory';
@@ -65,12 +64,27 @@ function AppRoutes() {
 }
 
 function App() {
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+
   return (
     <ChakraProvider value={defaultSystem}>
       <QueryClientProvider client={queryClient}>
         <AgentProvider>
           <AuthProvider>
-            <AppRoutes />
+            <div className="min-h-screen flex bg-gray-50">
+              {/* Sidebar for desktop & toggled on mobile */}
+              <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+              <div className="flex-1 flex flex-col">
+                {/* Mobile header */}
+                <div className="md:hidden">
+                  <MobileHeader toggleMenu={() => setSidebarOpen((open) => !open)} />
+                </div>
+                {/* Main content */}
+                <main className="flex-1 p-4 md:p-8">
+                  <AppRoutes />
+                </main>
+              </div>
+            </div>
             <Toaster />
           </AuthProvider>
         </AgentProvider>

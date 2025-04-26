@@ -573,6 +573,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Webhook test endpoint
   app.post("/api/webhooks/test", requireAdmin, handleZapierTest);
   
+  // Health check endpoint for Render
+  app.get("/api/health", (_req: Request, res: Response) => {
+    res.status(200).json({ status: "ok" });
+  });
+
   // User Management API Endpoints (Admin only)
   app.get("/api/admin/users", requireAdmin, async (req: Request, res: Response) => {
     try {

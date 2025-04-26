@@ -61,12 +61,20 @@ export default function AuthPage() {
   
   // If already logged in, redirect to home
   if (user) {
-    return <Redirect to="/" />;
+    // Only redirect if not already on home/dashboard
+    if (window.location.pathname !== '/') {
+      return <Redirect to="/" />;
+    }
   }
 
   // Handle login form submission
   const onLoginSubmit = (values: LoginFormValues) => {
-    loginMutation.mutate(values);
+    loginMutation.mutate(values, {
+      onSuccess: () => {
+        // Redirect to dashboard after successful login
+        window.location.href = '/';
+      }
+    });
   };
 
   // Handle registration form submission
