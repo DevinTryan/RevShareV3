@@ -1,9 +1,15 @@
 // This file contains configuration for connecting to the API
 // Change this URL to point to your deployed API
 
+// Determine if we're in development mode
+const isDevelopment = import.meta.env.DEV;
+
 export const API_CONFIG = {
   // Base URL for the API
-  baseUrl: import.meta.env.VITE_API_URL || 'https://revenue-share-calculator-api.onrender.com',
+  // In development, use the local server; in production, use the deployed API
+  baseUrl: isDevelopment 
+    ? 'http://localhost:8080' 
+    : (import.meta.env.VITE_API_URL || 'https://revenue-share-calculator-api.onrender.com'),
   
   // Whether to include credentials (cookies) with requests
   includeCredentials: true,
