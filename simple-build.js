@@ -22,55 +22,78 @@ try {
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Revenue Share Calculator</title>
+    <title>Revenue Share Calculator API</title>
     <style>
       body {
         font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
         margin: 0;
         padding: 0;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        min-height: 100vh;
         background-color: #f5f5f5;
+        color: #333;
       }
       .container {
         max-width: 800px;
-        margin: 0 auto;
+        margin: 50px auto;
         padding: 2rem;
         background-color: white;
         border-radius: 8px;
         box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
       }
       h1 {
-        color: #333;
+        color: #2c3e50;
         margin-bottom: 1rem;
+        text-align: center;
       }
       p {
-        color: #666;
+        color: #555;
         line-height: 1.6;
+        margin-bottom: 1rem;
       }
       .api-link {
         display: inline-block;
         margin-top: 1rem;
-        padding: 0.5rem 1rem;
-        background-color: #4a90e2;
+        padding: 0.75rem 1.5rem;
+        background-color: #3498db;
         color: white;
         text-decoration: none;
         border-radius: 4px;
+        font-weight: bold;
+        transition: background-color 0.2s;
       }
       .api-link:hover {
-        background-color: #3a80d2;
+        background-color: #2980b9;
+      }
+      .status {
+        margin-top: 2rem;
+        padding: 1rem;
+        background-color: #e8f5e9;
+        border-left: 4px solid #4caf50;
+        border-radius: 4px;
+      }
+      .status h2 {
+        margin-top: 0;
+        color: #2e7d32;
       }
     </style>
   </head>
   <body>
     <div class="container">
       <h1>Revenue Share Calculator API</h1>
-      <p>The Revenue Share Calculator API is running successfully!</p>
+      
+      <div class="status">
+        <h2>Status: Online</h2>
+        <p>The API server is running successfully!</p>
+      </div>
+      
       <p>This is the API server for the Revenue Share Calculator application. The frontend application should connect to this API to retrieve and manage data.</p>
+      
       <p>You can check the API health status by visiting the health endpoint:</p>
+      
       <a href="/api/health" class="api-link">Check API Health</a>
+      
+      <p style="margin-top: 2rem; font-size: 0.9rem; color: #7f8c8d;">
+        Deployed on Render • Last updated: ${new Date().toLocaleDateString()}
+      </p>
     </div>
   </body>
 </html>`;
