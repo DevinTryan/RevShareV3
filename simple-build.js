@@ -9,66 +9,50 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 try {
-  console.log('Starting simplified build process...');
+  console.log('Starting production build process...');
   
-  // Install esbuild globally to ensure it's available
-  console.log('Installing esbuild globally...');
-  execSync('npm install -g esbuild', { stdio: 'inherit' });
+  // Create a temporary vite.config.js for production build
+  console.log('Creating production Vite config...');
+  const viteConfig = `
+import { defineConfig } from 'vite';
+import react from '@vitejs/plugin-react';
+import path from 'path';
+
+export default defineConfig({
+  plugins: [react()],
+  build: {
+    outDir: 'dist',
+    emptyOutDir: true,
+    sourcemap: true,
+  },
+  resolve: {
+    alias: {
+      '@': path.resolve(__dirname, './client/src'),
+    },
+  },
+});
+`;
   
-  // Build the client-side code with proper React support
-  console.log('Building client-side code...');
-  execSync('npx esbuild client/src/main.tsx --bundle --minify --sourcemap --loader:.js=jsx --loader:.ts=tsx --define:process.env.NODE_ENV=\\"production\\" --outfile=dist/client.js', { stdio: 'inherit' });
+  fs.writeFileSync('vite.config.prod.js', viteConfig);
   
-  // Create index.html in dist
-  console.log('Creating index.html...');
-  const indexHtml = `<!DOCTYPE html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Revenue Share Calculator</title>
-    <link rel="stylesheet" href="/client.css" />
-    <script>
-      window.global = window;
-    </script>
-  </head>
-  <body>
-    <div id="root"></div>
-    <script src="/client.js"></script>
-  </body>
-</html>`;
+  // Install required build dependencies
+  console.log('Installing build dependencies...');
+  execSync('npm install -g vite', { stdio: 'inherit' });
   
-  // Ensure dist directory exists
-  if (!fs.existsSync('dist')) {
-    fs.mkdirSync('dist');
-  }
+  // Build the client using Vite
+  console.log('Building client with Vite...');
+  execSync('npx vite build --config vite.config.prod.js', { stdio: 'inherit' });
   
-  // Write index.html to dist
-  fs.writeFileSync('dist/index.html', indexHtml);
-  
-  // Copy any static assets
-  console.log('Copying static assets...');
-  try {
-    execSync('mkdir -p dist/public && cp -r public/* dist/public/ || true', { stdio: 'inherit' });
-  } catch (e) {
-    console.log('No public directory found, skipping...');
-  }
-  
-  // Copy client assets
-  console.log('Copying client assets...');
-  try {
-    execSync('mkdir -p dist/assets && cp -r client/src/assets/* dist/assets/ || true', { stdio: 'inherit' });
-  } catch (e) {
-    console.log('No client assets directory found, skipping...');
-  }
-  
-  // Build the server-side code using the production version
+  // Build the server-side code
   console.log('Building server-side code...');
   execSync('npx esbuild server/index-prod.ts --platform=node --packages=external --bundle --format=esm --outdir=dist', { stdio: 'inherit' });
   
   // Rename index-prod.js to index.js
   console.log('Finalizing build...');
   fs.renameSync('dist/index-prod.js', 'dist/index.js');
+  
+  // Clean up
+  fs.unlinkSync('vite.config.prod.js');
   
   console.log('Build completed successfully!');
 } catch (error) {
