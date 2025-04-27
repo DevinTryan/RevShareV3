@@ -3,8 +3,27 @@ import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+// Resolve directory paths for ESM
+let __filename: string = '';
+let __dirname: string = '';
+
+function __filenameGlobal() {
+  // @ts-ignore
+  return typeof __filename !== 'undefined' ? __filename : '';
+}
+
+function __dirnameGlobal() {
+  // @ts-ignore
+  return typeof __dirname !== 'undefined' ? __dirname : '';
+}
+
+try {
+  __filename = fileURLToPath(import.meta.url);
+  __dirname = path.dirname(__filename);
+} catch (e) {
+  __filename = __filenameGlobal();
+  __dirname = __dirnameGlobal();
+}
 
 export function log(message: string, source = "express") {
   const formattedTime = new Date().toLocaleTimeString("en-US", {
@@ -17,20 +36,13 @@ export function log(message: string, source = "express") {
   console.log(`${formattedTime} [${source}] ${message}`);
 }
 
-// Production version doesn't need Vite
-export async function setupVite(app: Express) {
-  // In production, we don't need Vite middleware
-  log("Running in production mode - Vite not needed");
-}
-
 export function serveStatic(app: Express) {
   // In production, serve from the dist directory
   const distPath = path.resolve(__dirname, "../dist");
   
   if (!fs.existsSync(distPath)) {
-    throw new Error(
-      `Could not find the build directory: ${distPath}, make sure to build the client first`,
-    );
+    log(`WARNING: Build directory not found at ${distPath}. Static files will not be served.`);
+    return;
   }
 
   // Serve static files from the dist directory
@@ -41,6 +53,14 @@ export function serveStatic(app: Express) {
 
   // For any non-API route, serve the index.html file
   app.get(/^(?!\/api\/).*/, (req, res) => {
-    res.sendFile(path.resolve(distPath, "index.html"));
+    const indexPath = path.resolve(distPath, "index.html");
+    if (fs.existsSync(indexPath)) {
+      res.sendFile(indexPath);
+    } else {
+      log(`WARNING: index.html not found at ${indexPath}`);
+      res.status(404).send('Application not found. Please make sure the client has been built.');
+    }
   });
+  
+  log('Static file serving configured for production');
 }

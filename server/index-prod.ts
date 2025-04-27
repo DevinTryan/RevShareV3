@@ -1,8 +1,48 @@
+console.log("SERVER ENTRYPOINT STARTED - PRODUCTION MODE");
+
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
-import { setupVite, serveStatic, log } from "./vite-prod";
+import { serveStatic, log } from "./vite-prod";
+import dotenv from "dotenv";
+
+// Load environment variables
+dotenv.config();
 
 const app = express();
+
+// BULLETPROOF CORS MIDDLEWARE - DEBUG MODE
+const allowedOrigins = [
+  "https://revenue-share-calculator-frontend.onrender.com",
+  "http://localhost:5173",
+  "http://localhost:3000",
+  "https://www.revenue-share-calculator-frontend.onrender.com"
+];
+
+function bulletproofCors(req: Request, res: Response, next: NextFunction) {
+  const origin = req.headers.origin;
+  const method = req.method;
+  const url = req.originalUrl;
+  // Always set CORS headers for debugging
+  let allowOrigin = "";
+  if (origin && allowedOrigins.includes(origin)) {
+    allowOrigin = origin;
+  } else if (origin) {
+    allowOrigin = allowedOrigins[0]; // fallback for debugging
+  }
+  res.setHeader("Access-Control-Allow-Origin", allowOrigin);
+  res.setHeader("Access-Control-Allow-Credentials", "true");
+  res.setHeader("Access-Control-Allow-Methods", "GET,POST,PUT,DELETE,OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", req.headers["access-control-request-headers"] || "Content-Type,Authorization");
+  console.log(`[CORS DEBUG] Method: ${method}, URL: ${url}, Origin: ${origin}, Allow-Origin: ${allowOrigin}`);
+  if (method === "OPTIONS") {
+    res.status(200).end();
+    return;
+  }
+  next();
+}
+
+app.use(bulletproofCors);
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
@@ -38,9 +78,6 @@ app.use((req, res, next) => {
 
 // Register API routes
 registerRoutes(app);
-
-// In production, we don't need to pass a server to setupVite
-setupVite(app);
 
 // Serve static files
 serveStatic(app);
