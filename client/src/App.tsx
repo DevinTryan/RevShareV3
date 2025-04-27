@@ -66,6 +66,21 @@ function AppRoutes() {
 
 function App() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  return (
+    <ChakraProvider value={defaultSystem}>
+      <QueryClientProvider client={queryClient}>
+        <AgentProvider>
+          <AuthProvider>
+            <MainApp sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
+          </AuthProvider>
+        </AgentProvider>
+      </QueryClientProvider>
+    </ChakraProvider>
+  );
+}
+
+function MainApp({ sidebarOpen, setSidebarOpen }: { sidebarOpen: boolean; setSidebarOpen: React.Dispatch<React.SetStateAction<boolean>> }) {
   const { user, isLoading } = useAuth();
 
   if (isLoading) {
@@ -79,51 +94,34 @@ function App() {
   // If not authenticated, only show AuthPage routes
   if (!user) {
     return (
-      <ChakraProvider value={defaultSystem}>
-        <QueryClientProvider client={queryClient}>
-          <AgentProvider>
-            <AuthProvider>
-              <main className="flex-1 p-4 md:p-8">
-                <Switch>
-                  <Route path="/auth" component={AuthPage} />
-                  <Route path="/login" component={AuthPage} />
-                  <Route path="/register" component={AuthPage} />
-                  <Route component={NotFound} />
-                </Switch>
-                <Toaster />
-              </main>
-            </AuthProvider>
-          </AgentProvider>
-        </QueryClientProvider>
-      </ChakraProvider>
+      <main className="flex-1 p-4 md:p-8">
+        <Switch>
+          <Route path="/auth" component={AuthPage} />
+          <Route path="/login" component={AuthPage} />
+          <Route path="/register" component={AuthPage} />
+          <Route component={NotFound} />
+        </Switch>
+        <Toaster />
+      </main>
     );
   }
 
   // Authenticated: show full app
   return (
-    <ChakraProvider value={defaultSystem}>
-      <QueryClientProvider client={queryClient}>
-        <AgentProvider>
-          <AuthProvider>
-            <div className="min-h-screen flex bg-gray-50">
-              {/* Sidebar for desktop & toggled on mobile */}
-              <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
-              <div className="flex-1 flex flex-col">
-                {/* Mobile header */}
-                <div className="md:hidden">
-                  <MobileHeader toggleMenu={() => setSidebarOpen((open) => !open)} />
-                </div>
-                {/* Main content */}
-                <main className="flex-1 p-4 md:p-8">
-                  <AppRoutes />
-                </main>
-              </div>
-            </div>
-            <Toaster />
-          </AuthProvider>
-        </AgentProvider>
-      </QueryClientProvider>
-    </ChakraProvider>
+    <div className="min-h-screen flex bg-gray-50">
+      {/* Sidebar for desktop & toggled on mobile */}
+      <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+      <div className="flex-1 flex flex-col">
+        {/* Mobile header */}
+        <div className="md:hidden">
+          <MobileHeader toggleMenu={() => setSidebarOpen((open) => !open)} />
+        </div>
+        {/* Main content */}
+        <main className="flex-1 p-4 md:p-8">
+          <AppRoutes />
+        </main>
+      </div>
+    </div>
   );
 }
 
