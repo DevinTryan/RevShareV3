@@ -1,10 +1,41 @@
 import express, { type Request, Response, NextFunction } from "express";
+import cors from "cors";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 
 const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
+
+// CORS middleware: allow frontend onrender domain and credentials
+app.use(
+  cors({
+    origin: [
+      "https://revenue-share-calculator-frontend.onrender.com",
+      "https://revenue-share-calculator-frontend.onrender.com/",
+      "https://revenue-share-calculator-frontend.onrender.com/login",
+      "https://revenue-share-calculator-frontend.onrender.com/register",
+      "https://revenue-share-calculator-frontend.onrender.com/auth"
+    ],
+    credentials: true,
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+  })
+);
+
+// Handle preflight requests
+app.options("*", cors({
+  origin: [
+    "https://revenue-share-calculator-frontend.onrender.com",
+    "https://revenue-share-calculator-frontend.onrender.com/",
+    "https://revenue-share-calculator-frontend.onrender.com/login",
+    "https://revenue-share-calculator-frontend.onrender.com/register",
+    "https://revenue-share-calculator-frontend.onrender.com/auth"
+  ],
+  credentials: true,
+  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"],
+}));
 
 app.use((req, res, next) => {
   const start = Date.now();
@@ -44,7 +75,8 @@ app.use((req, res, next) => {
     const message = err.message || "Internal Server Error";
 
     res.status(status).json({ message });
-    throw err;
+    // Do not throw after sending response
+    // throw err;
   });
 
   // importantly only setup vite in development and after
