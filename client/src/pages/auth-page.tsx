@@ -69,12 +69,22 @@ export default function AuthPage() {
 
   // Handle login form submission
   const onLoginSubmit = (values: LoginFormValues) => {
-    loginMutation.mutate(values, {
-      onSuccess: () => {
-        // Redirect to dashboard after successful login
-        window.location.href = '/';
-      }
-    });
+    console.log("Login form submitted with values:", values);
+    
+    try {
+      loginMutation.mutate(values, {
+        onSuccess: () => {
+          console.log("Login successful, redirecting to dashboard");
+          // Force a hard redirect to the dashboard
+          window.location.href = '/';
+        },
+        onError: (error) => {
+          console.error("Login error in form handler:", error);
+        }
+      });
+    } catch (error) {
+      console.error("Exception during login mutation:", error);
+    }
   };
 
   // Handle registration form submission

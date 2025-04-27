@@ -16,15 +16,25 @@ export async function apiRequest(
   // Use the getApiUrl helper to ensure the URL is properly formatted
   const fullUrl = url.startsWith('http') ? url : getApiUrl(url);
   
-  const res = await fetch(fullUrl, {
-    method,
-    headers: data ? { "Content-Type": "application/json" } : {},
-    body: data ? JSON.stringify(data) : undefined,
-    credentials: API_CONFIG.includeCredentials ? "include" : "same-origin",
-  });
+  try {
+    const res = await fetch(fullUrl, {
+      method,
+      headers: {
+        ...API_CONFIG.defaultHeaders,
+        ...(data ? { 'Content-Type': 'application/json' } : {})
+      },
+      body: data ? JSON.stringify(data) : undefined,
+      credentials: API_CONFIG.includeCredentials ? "include" : "same-origin",
+      mode: 'cors'
+    });
 
-  await throwIfResNotOk(res);
-  return res;
+    // Don't throw here, let the caller handle the response status
+    return res;
+  } catch (error) {
+    // This will catch network errors like CORS issues, connection refused, etc.
+    console.error(`Network error when fetching ${fullUrl}:`, error);
+    throw new Error(`Network error: Unable to connect to the server. Please check your connection and try again.`);
+  }
 }
 
 type UnauthorizedBehavior = "returnNull" | "throw";
@@ -37,16 +47,27 @@ export const getQueryFn: <T>(options: {
     const url = queryKey[0] as string;
     const fullUrl = url.startsWith('http') ? url : getApiUrl(url);
     
-    const res = await fetch(fullUrl, {
-      credentials: API_CONFIG.includeCredentials ? "include" : "same-origin",
-    });
+    try {
+      const res = await fetch(fullUrl, {
+        credentials: API_CONFIG.includeCredentials ? "include" : "same-origin",
+        headers: API_CONFIG.defaultHeaders,
+        mode: 'cors'
+      });
 
-    if (unauthorizedBehavior === "returnNull" && res.status === 401) {
-      return null;
+      if (unauthorizedBehavior === "returnNull" && res.status === 401) {
+        return null;
+      }
+
+      if (!res.ok) {
+        const text = await res.text();
+        throw new Error(text || res.statusText);
+      }
+      
+      return await res.json();
+    } catch (error) {
+      console.error(`Error fetching ${fullUrl}:`, error);
+      throw error;
     }
-
-    await throwIfResNotOk(res);
-    return await res.json();
   };
 
 export const queryClient = new QueryClient({

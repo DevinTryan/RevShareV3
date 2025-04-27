@@ -99,7 +99,12 @@ function MainApp({ sidebarOpen, setSidebarOpen }: { sidebarOpen: boolean; setSid
           <Route path="/auth" component={AuthPage} />
           <Route path="/login" component={AuthPage} />
           <Route path="/register" component={AuthPage} />
-          <Route component={NotFound} />
+          <Route path="/">
+            <Redirect to="/login" />
+          </Route>
+          <Route>
+            <Redirect to="/login" />
+          </Route>
         </Switch>
         <Toaster />
       </main>

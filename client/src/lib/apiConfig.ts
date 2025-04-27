@@ -17,6 +17,7 @@ export const API_CONFIG = {
   // Default headers for API requests
   defaultHeaders: {
     'Content-Type': 'application/json',
+    'Accept': 'application/json',
   }
 };
 

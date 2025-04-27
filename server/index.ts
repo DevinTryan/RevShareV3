@@ -1,3 +1,5 @@
+console.log("SERVER ENTRYPOINT STARTED");
+
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
@@ -6,17 +8,27 @@ const app = express();
 
 // --- CORS MIDDLEWARE: ENSURE HEADERS ALWAYS SET ---
 const allowedOrigins = [
-  "https://revenue-share-calculator-frontend.onrender.com"
+  "https://revenue-share-calculator-frontend.onrender.com",
+  "http://localhost:8080",
+  "http://127.0.0.1:8080",
+  "http://localhost:5173"
 ];
 
 function setCorsHeaders(req: Request, res: Response, next: NextFunction) {
   const origin = req.headers.origin;
-  if (!origin || allowedOrigins.includes(origin)) {
+  console.log('CORS middleware running for', req.method, req.originalUrl, 'Origin:', origin);
+  
+  // Allow all origins in development mode
+  if (process.env.NODE_ENV === 'development') {
+    res.header("Access-Control-Allow-Origin", origin || '*');
+  } else if (!origin || allowedOrigins.includes(origin)) {
     res.header("Access-Control-Allow-Origin", origin || allowedOrigins[0]);
-    res.header("Access-Control-Allow-Credentials", "true");
-    res.header("Access-Control-Allow-Methods", "GET,POST,PUT,DELETE,OPTIONS");
-    res.header("Access-Control-Allow-Headers", "Content-Type,Authorization");
   }
+  
+  res.header("Access-Control-Allow-Credentials", "true");
+  res.header("Access-Control-Allow-Methods", "GET,POST,PUT,DELETE,OPTIONS");
+  res.header("Access-Control-Allow-Headers", "Content-Type,Authorization");
+  
   if (req.method === "OPTIONS") {
     res.sendStatus(200);
   } else {
