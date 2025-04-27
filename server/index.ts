@@ -1,47 +1,34 @@
 import express, { type Request, Response, NextFunction } from "express";
-import cors from "cors";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 
 const app = express();
+
+// --- CORS MIDDLEWARE: ENSURE HEADERS ALWAYS SET ---
+const allowedOrigins = [
+  "https://revenue-share-calculator-frontend.onrender.com"
+];
+
+function setCorsHeaders(req: Request, res: Response, next: NextFunction) {
+  const origin = req.headers.origin;
+  if (!origin || allowedOrigins.includes(origin)) {
+    res.header("Access-Control-Allow-Origin", origin || allowedOrigins[0]);
+    res.header("Access-Control-Allow-Credentials", "true");
+    res.header("Access-Control-Allow-Methods", "GET,POST,PUT,DELETE,OPTIONS");
+    res.header("Access-Control-Allow-Headers", "Content-Type,Authorization");
+  }
+  if (req.method === "OPTIONS") {
+    res.sendStatus(200);
+  } else {
+    next();
+  }
+}
+
+// Place this as the FIRST middleware
+app.use(setCorsHeaders);
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
-
-// CORS middleware: allow frontend onrender domain and credentials
-app.use(
-  cors({
-    origin: function (origin, callback) {
-      const allowedOrigins = [
-        "https://revenue-share-calculator-frontend.onrender.com"
-      ];
-      if (!origin || allowedOrigins.includes(origin)) {
-        callback(null, true);
-      } else {
-        callback(new Error('Not allowed by CORS'));
-      }
-    },
-    credentials: true,
-    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization"],
-  })
-);
-
-// Handle preflight requests
-app.options("*", cors({
-  origin: function (origin, callback) {
-    const allowedOrigins = [
-      "https://revenue-share-calculator-frontend.onrender.com"
-    ];
-    if (!origin || allowedOrigins.includes(origin)) {
-      callback(null, true);
-    } else {
-      callback(new Error('Not allowed by CORS'));
-    }
-  },
-  credentials: true,
-  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-  allowedHeaders: ["Content-Type", "Authorization"],
-}));
 
 app.use((req, res, next) => {
   const start = Date.now();
