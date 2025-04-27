@@ -7,8 +7,6 @@ import { promisify } from "util";
 import { storage } from "./storage";
 import { User, UserRole } from "../shared/schema";
 import { z } from 'zod';
-import { db } from './db';
-import { eq } from 'drizzle-orm';
 import { comparePassword } from './security';
 
 declare global {
@@ -69,7 +67,9 @@ export function setupAuth(app: Express) {
     store: storage.sessionStore,
     cookie: {
       maxAge: 1000 * 60 * 60 * 24, // 1 day
-      secure: process.env.NODE_ENV === "production"
+      secure: true, // Always secure for cross-domain cookies
+      sameSite: 'none', // Allow cross-site cookies (critical for different domains)
+      httpOnly: true // Prevent JavaScript access (security best practice)
     }
   };
 
@@ -82,23 +82,14 @@ export function setupAuth(app: Express) {
   passport.use(
     new LocalStrategy(async (username: string, password: string, done: any) => {
       try {
-        const result = await db
-          .select()
-          .from(users)
-          .where(eq(users.username, username))
-          .limit(1);
-
-        if (result.length === 0) {
+        const user = await storage.getUserByUsername(username);
+        if (!user) {
           return done(null, false, { message: 'Invalid username or password' });
         }
-
-        const user = result[0];
         const isMatch = await comparePassword(password, user.password);
-
         if (!isMatch) {
           return done(null, false, { message: 'Invalid username or password' });
         }
-
         return done(null, user as Express.User);
       } catch (error) {
         return done(error);
@@ -113,17 +104,11 @@ export function setupAuth(app: Express) {
 
   passport.deserializeUser(async (id: number, done) => {
     try {
-      const result = await db
-        .select()
-        .from(users)
-        .where(eq(users.id, id))
-        .limit(1);
-
-      if (result.length === 0) {
+      const user = await storage.getUser(id);
+      if (!user) {
         return done(new Error('User not found'));
       }
-
-      done(null, result[0] as Express.User);
+      done(null, user as Express.User);
     } catch (error) {
       done(error);
     }
@@ -172,7 +157,12 @@ export function setupAuth(app: Express) {
       });
 
       // Log the user in
-      req.login(user, (err) => {
+      req.login({
+        ...user,
+        createdAt: user.createdAt || new Date(),
+        failedLoginAttempts: user.failedLoginAttempts ?? 0,
+        isLocked: user.isLocked ?? false
+      }, (err: any) => {
         if (err) {
           return res.status(500).json({ message: "Error during login after registration" });
         }
@@ -192,14 +182,14 @@ export function setupAuth(app: Express) {
       return res.status(400).json({ message: "Invalid login data", errors: result.error.errors });
     }
 
-    passport.authenticate("local", (err, user, info) => {
+    passport.authenticate("local", (err: any, user: Express.User, info: any) => {
       if (err) {
         return res.status(500).json({ message: "Internal server error" });
       }
       if (!user) {
         return res.status(401).json({ message: info?.message || "Invalid credentials" });
       }
-      req.login(user, (err) => {
+      req.login(user, (err: any) => {
         if (err) {
           return res.status(500).json({ message: "Error during login" });
         }

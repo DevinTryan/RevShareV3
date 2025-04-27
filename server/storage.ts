@@ -9,12 +9,12 @@ import session from "express-session";
 
 export interface IStorage {
   // Session store for authentication
-  sessionStore: session.Store;
+  sessionStore: session.Store | undefined;
   
   // Agent operations
   getAgents(): Promise<Agent[]>;
   getAgent(id: number): Promise<Agent | undefined>;
-  createAgent(agent: InsertAgent): Promise<Agent>;
+  createAgent(insertAgent: InsertAgent): Promise<Agent>;
   updateAgent(id: number, agent: Partial<Agent>): Promise<Agent | undefined>;
   deleteAgent(id: number): Promise<boolean>;
   getAgentWithDownline(id: number): Promise<AgentWithDownline | undefined>;
@@ -24,7 +24,7 @@ export interface IStorage {
   // Transaction operations
   getTransactions(): Promise<Transaction[]>;
   getTransaction(id: number): Promise<Transaction | undefined>;
-  createTransaction(transaction: InsertTransaction): Promise<Transaction>;
+  createTransaction(insertTransaction: InsertTransaction): Promise<Transaction>;
   updateTransaction(id: number, transaction: Partial<Transaction>): Promise<Transaction | undefined>;
   deleteTransaction(id: number): Promise<boolean>;
   getAgentTransactions(agentId: number): Promise<Transaction[]>;
@@ -63,7 +63,7 @@ export class MemStorage implements IStorage {
   private transactionIdCounter: number;
   private revenueShareIdCounter: number;
   private userIdCounter: number;
-  public sessionStore: session.Store;
+  public sessionStore: session.Store | undefined;
 
   constructor() {
     this.agents = new Map();
@@ -76,10 +76,14 @@ export class MemStorage implements IStorage {
     this.userIdCounter = 1;
     
     // Create memory store for session
-    const MemoryStore = require('memorystore')(session);
-    this.sessionStore = new MemoryStore({
-      checkPeriod: 86400000 // prune expired entries every 24h
-    });
+    // Use dynamic import for memorystore to support ES modules
+    (async () => {
+      const mod = await import('memorystore');
+      const MemoryStore = mod.default(session);
+      this.sessionStore = new MemoryStore({
+        checkPeriod: 86400000 // prune expired entries every 24h
+      });
+    })();
   }
 
   // Agent operations
@@ -94,11 +98,27 @@ export class MemStorage implements IStorage {
   async createAgent(insertAgent: InsertAgent): Promise<Agent> {
     const id = this.agentIdCounter++;
     const now = new Date();
-    const agent: Agent = { 
-      id, 
+    const agent: Agent = {
+      id,
       ...insertAgent,
+      agentCode: insertAgent.agentCode ?? null,
+      capType: insertAgent.capType ?? null,
       currentCap: 0,
-      createdAt: now 
+      createdAt: now,
+      lastModifiedBy: null,
+      lastModifiedAt: null,
+      gciSinceAnniversary: insertAgent.gciSinceAnniversary ?? null,
+      sponsorId: insertAgent.sponsorId ?? null,
+      anniversaryDate: insertAgent.anniversaryDate,
+      status: insertAgent.status,
+      name: insertAgent.name,
+      agentType: insertAgent.agentType,
+      currentTier: insertAgent.currentTier ?? null,
+      totalSalesYTD: insertAgent.totalSalesYTD ?? null,
+      totalGCIYTD: insertAgent.totalGCIYTD ?? null,
+      careerSalesCount: insertAgent.careerSalesCount ?? null,
+      statusChangeDate: insertAgent.statusChangeDate ?? null,
+      statusChangeReason: insertAgent.statusChangeReason ?? null
     };
     this.agents.set(id, agent);
     return agent;
@@ -174,11 +194,13 @@ export class MemStorage implements IStorage {
 
   private async calculateTotalEarnings(agentId: number): Promise<number> {
     const revenueShares = Array.from(this.revenueShares.values());
-    const agentShares = revenueShares.filter(share => share.sponsorId === agentId);
+    const agentShares = revenueShares.filter(share => 
+      share.sourceAgentId === agentId
+    );
     
     if (agentShares.length === 0) return 0;
     
-    const total = agentShares.reduce((sum, share) => sum + share.amount, 0);
+    const total = agentShares.reduce((sum: number, share: any) => sum + share.amount, 0);
     return total;
   }
 
@@ -203,7 +225,63 @@ export class MemStorage implements IStorage {
       id,
       ...insertTransaction,
       companyGCI,
-      createdAt: now
+      createdAt: now,
+      lastModifiedBy: null,
+      lastModifiedAt: null,
+      disputeResolvedBy: null,
+      clientName: insertTransaction.clientName ?? null,
+      clientEmail: insertTransaction.clientEmail ?? null,
+      clientPhone: insertTransaction.clientPhone ?? null,
+      referralAmount: insertTransaction.referralAmount ?? null,
+      referralType: insertTransaction.referralType ?? null,
+      referralAgentName: insertTransaction.referralAgentName ?? null,
+      referralBrokerageName: insertTransaction.referralBrokerageName ?? null,
+      showingAgentId: insertTransaction.showingAgentId ?? null,
+      showingAgentFee: insertTransaction.showingAgentFee ?? null,
+      complianceFee: insertTransaction.complianceFee ?? null,
+      complianceFeePaidByClient: insertTransaction.complianceFeePaidByClient ?? null,
+      depositAmount: insertTransaction.depositAmount ?? null,
+      depositDate: insertTransaction.depositDate ?? null,
+      depositPostedDate: insertTransaction.depositPostedDate ?? null,
+      commissionSplit: insertTransaction.commissionSplit ?? null,
+      commissionNotes: insertTransaction.commissionNotes ?? null,
+      additionalAgentId: insertTransaction.additionalAgentId ?? null,
+      additionalAgentFee: insertTransaction.additionalAgentFee ?? null,
+      additionalAgentPercentage: insertTransaction.additionalAgentPercentage ?? null,
+      additionalAgentCost: insertTransaction.additionalAgentCost ?? null,
+      teamAgentsIncome: insertTransaction.teamAgentsIncome ?? null,
+      personalIncome: insertTransaction.personalIncome ?? null,
+      actualCheckAmount: insertTransaction.actualCheckAmount ?? null,
+      agentNameArchived: insertTransaction.agentNameArchived ?? null,
+      validationErrors: null,
+      isDisputed: null,
+      disputeReason: null,
+      disputeResolvedAt: null,
+      closeDate: insertTransaction.closeDate ?? null,
+      transactionStatus: insertTransaction.transactionStatus ?? null,
+      leadSource: insertTransaction.leadSource ?? null,
+      isCompanyProvided: insertTransaction.isCompanyProvided ?? null,
+      isSelfGenerated: insertTransaction.isSelfGenerated ?? null,
+      agentCommissionPercentage: insertTransaction.agentCommissionPercentage ?? null,
+      agentCommissionAmount: insertTransaction.agentCommissionAmount ?? null,
+      referralPercentage: insertTransaction.referralPercentage ?? null,
+      source: insertTransaction.source ?? null,
+      referrer: insertTransaction.referrer ?? null,
+      lender: insertTransaction.lender ?? null,
+      sellerCommissionPercentage: insertTransaction.sellerCommissionPercentage ?? null,
+      buyerCommissionPercentage: insertTransaction.buyerCommissionPercentage ?? null,
+      referralFee: insertTransaction.referralFee ?? null,
+      showingAgent: insertTransaction.showingAgent ?? null,
+      escrowNumber: insertTransaction.escrowNumber ?? null,
+      companyName: insertTransaction.companyName ?? null,
+      propertyAddress: insertTransaction.propertyAddress,
+      saleAmount: insertTransaction.saleAmount,
+      commissionPercentage: insertTransaction.commissionPercentage,
+      agentId: insertTransaction.agentId,
+      transactionDate: insertTransaction.transactionDate,
+      transactionType: insertTransaction.transactionType,
+      escrowOffice: insertTransaction.escrowOffice ?? null,
+      escrowOfficer: insertTransaction.escrowOfficer ?? null,
     };
     
     this.transactions.set(id, transaction);
@@ -356,7 +434,7 @@ export class MemStorage implements IStorage {
     
     if (relevantShares.length === 0) return 0;
     
-    const total = relevantShares.reduce((sum, share) => sum + share.amount, 0);
+    const total = relevantShares.reduce((sum: number, share: any) => sum + share.amount, 0);
     return total;
   }
 
@@ -387,7 +465,9 @@ export class MemStorage implements IStorage {
     const revenueShare: RevenueShare = {
       id,
       ...insertRevenueShare,
-      createdAt: now
+      createdAt: now,
+      lastModifiedBy: null,
+      lastModifiedAt: null
     };
     
     this.revenueShares.set(id, revenueShare);
@@ -415,10 +495,15 @@ export class MemStorage implements IStorage {
     const user: User = {
       id,
       ...insertUser,
+      agentId: insertUser.agentId ?? null,
       createdAt: now,
       lastLogin: null,
       resetToken: null,
-      resetTokenExpiry: null
+      resetTokenExpiry: null,
+      failedLoginAttempts: 0,
+      lastFailedLogin: null,
+      isLocked: false,
+      lockExpiresAt: null
     };
     
     this.users.set(id, user);
@@ -524,9 +609,9 @@ export class MemStorage implements IStorage {
     return agents.map(agent => {
       const agentTransactions = transactions.filter(tx => tx.agentId === agent.id);
       
-      const totalVolume = agentTransactions.reduce((sum, tx) => sum + tx.saleAmount, 0);
-      const totalGCI = agentTransactions.reduce((sum, tx) => sum + tx.companyGCI, 0);
-      const totalAgentIncome = agentTransactions.reduce((sum, tx) => sum + (tx.agentCommissionAmount || 0), 0);
+      const totalVolume = agentTransactions.reduce((sum: number, tx: any) => sum + tx.saleAmount, 0);
+      const totalGCI = agentTransactions.reduce((sum: number, tx: any) => sum + tx.companyGCI, 0);
+      const totalAgentIncome = agentTransactions.reduce((sum: number, tx: any) => sum + (tx.agentCommissionAmount || 0), 0);
       const totalCompanyIncome = totalGCI - totalAgentIncome;
       const averageSalePrice = agentTransactions.length > 0 
         ? totalVolume / agentTransactions.length 
@@ -576,9 +661,9 @@ export class MemStorage implements IStorage {
       const { transactions } = data;
       
       data.transactionCount = transactions.length;
-      data.totalVolume = transactions.reduce((sum, tx) => sum + tx.saleAmount, 0);
-      data.totalGCI = transactions.reduce((sum, tx) => sum + tx.companyGCI, 0);
-      data.totalAgentIncome = transactions.reduce((sum, tx) => sum + (tx.agentCommissionAmount || 0), 0);
+      data.totalVolume = transactions.reduce((sum: number, tx: any) => sum + tx.saleAmount, 0);
+      data.totalGCI = transactions.reduce((sum: number, tx: any) => sum + tx.companyGCI, 0);
+      data.totalAgentIncome = transactions.reduce((sum: number, tx: any) => sum + (tx.agentCommissionAmount || 0), 0);
       data.totalCompanyIncome = data.totalGCI - data.totalAgentIncome;
       data.averageSalePrice = data.transactionCount > 0 
         ? data.totalVolume / data.transactionCount 
@@ -597,11 +682,11 @@ export class MemStorage implements IStorage {
   async getIncomeDistributionReport(filters: any): Promise<any> {
     const transactions = await this.getFilteredTransactions(filters);
     
-    const totalGCI = transactions.reduce((sum, tx) => sum + tx.companyGCI, 0);
-    const totalAgentIncome = transactions.reduce((sum, tx) => sum + (tx.agentCommissionAmount || 0), 0);
+    const totalGCI = transactions.reduce((sum: number, tx: any) => sum + tx.companyGCI, 0);
+    const totalAgentIncome = transactions.reduce((sum: number, tx: any) => sum + (tx.agentCommissionAmount || 0), 0);
     const totalCompanyIncome = totalGCI - totalAgentIncome;
-    const totalShowingAgentFees = transactions.reduce((sum, tx) => sum + (tx.showingAgentFee || 0), 0);
-    const totalReferralFees = transactions.reduce((sum, tx) => sum + (tx.referralAmount || 0), 0);
+    const totalShowingAgentFees = transactions.reduce((sum: number, tx: any) => sum + (tx.showingAgentFee || 0), 0);
+    const totalReferralFees = transactions.reduce((sum: number, tx: any) => sum + (tx.referralAmount || 0), 0);
     
     // Count unique agents
     const uniqueAgentIds = new Set(transactions.map(tx => tx.agentId));
@@ -650,9 +735,9 @@ export class MemStorage implements IStorage {
       const { transactions } = data;
       
       data.transactionCount = transactions.length;
-      data.totalVolume = transactions.reduce((sum, tx) => sum + tx.saleAmount, 0);
-      data.totalGCI = transactions.reduce((sum, tx) => sum + tx.companyGCI, 0);
-      data.totalAgentIncome = transactions.reduce((sum, tx) => sum + (tx.agentCommissionAmount || 0), 0);
+      data.totalVolume = transactions.reduce((sum: number, tx: any) => sum + tx.saleAmount, 0);
+      data.totalGCI = transactions.reduce((sum: number, tx: any) => sum + tx.companyGCI, 0);
+      data.totalAgentIncome = transactions.reduce((sum: number, tx: any) => sum + (tx.agentCommissionAmount || 0), 0);
       data.totalCompanyIncome = data.totalGCI - data.totalAgentIncome;
       data.averageSalePrice = data.transactionCount > 0 
         ? data.totalVolume / data.transactionCount 
@@ -669,19 +754,12 @@ export class MemStorage implements IStorage {
   }
 }
 
-// Import database storage
-import { DatabaseStorage } from './database-storage';
-
 // Determine which storage to use based on environment
 let storage: IStorage;
 
-// Check if DATABASE_URL exists to determine if we should use database storage
-if (process.env.DATABASE_URL) {
-  console.log('Using database storage');
-  storage = new DatabaseStorage();
-} else {
-  console.log('Using memory storage');
-  storage = new MemStorage();
-}
+import { MongoDBStorage } from './storage-mongodb';
+
+console.log('Using MongoDB storage');
+storage = new MongoDBStorage();
 
 export { storage };
