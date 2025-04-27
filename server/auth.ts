@@ -99,6 +99,7 @@ export function setupAuth(app: Express) {
 
   // Serialization
   passport.serializeUser((user: Express.User, done) => {
+    // Ensure we're using the numeric ID for serialization
     done(null, user.id);
   });
 
@@ -108,7 +109,14 @@ export function setupAuth(app: Express) {
       if (!user) {
         return done(new Error('User not found'));
       }
-      done(null, user as Express.User);
+      // Convert to Express.User and ensure all required properties exist
+      const userForAuth = {
+        ...user,
+        createdAt: user.createdAt || new Date(),
+        failedLoginAttempts: user.failedLoginAttempts ?? 0,
+        isLocked: user.isLocked ?? false
+      };
+      done(null, userForAuth as Express.User);
     } catch (error) {
       done(error);
     }
@@ -184,16 +192,27 @@ export function setupAuth(app: Express) {
 
     passport.authenticate("local", (err: any, user: Express.User, info: any) => {
       if (err) {
+        console.error("Login error:", err);
         return res.status(500).json({ message: "Internal server error" });
       }
       if (!user) {
         return res.status(401).json({ message: info?.message || "Invalid credentials" });
       }
-      req.login(user, (err: any) => {
+      
+      // Ensure user object has all required properties
+      const userForAuth = {
+        ...user,
+        createdAt: user.createdAt || new Date(),
+        failedLoginAttempts: user.failedLoginAttempts ?? 0,
+        isLocked: user.isLocked ?? false
+      };
+      
+      req.login(userForAuth, (err: any) => {
         if (err) {
+          console.error("Login session error:", err);
           return res.status(500).json({ message: "Error during login" });
         }
-        return res.status(200).json(user);
+        return res.status(200).json(userForAuth);
       });
     })(req, res, next);
   });

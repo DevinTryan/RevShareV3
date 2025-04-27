@@ -88,9 +88,20 @@ export class MongoDBStorage implements IStorage {
   private documentToObject<T>(doc: any): T {
     if (!doc) return doc;
     
-    const obj = doc.toObject ? doc.toObject() : doc;
-    // Keep the MongoDB _id, but make it non-enumerable so it doesn't interfere with app logic
-    Object.defineProperty(obj, '_id', { enumerable: false });
+    // Convert MongoDB document to plain object
+    const obj = doc.toObject ? doc.toObject() : { ...doc };
+    
+    // Remove MongoDB-specific fields
+    if (obj._id) {
+      // Store MongoDB _id as a non-enumerable property
+      Object.defineProperty(obj, '_id', { enumerable: false, value: obj._id });
+    }
+    
+    // Remove __v (version key) if it exists
+    if (obj.__v !== undefined) {
+      delete obj.__v;
+    }
+    
     return obj as T;
   }
 
