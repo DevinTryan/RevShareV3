@@ -44,6 +44,7 @@ function AppRoutes() {
 
   return (
     <Switch>
+      <Route path="/auth" component={AuthPage} />
       <Route path="/login" component={AuthPage} />
       <Route path="/register" component={AuthPage} />
       <Route path="/unauthorized" component={UnauthorizedPage} />
@@ -65,7 +66,40 @@ function AppRoutes() {
 
 function App() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const { user, isLoading } = useAuth();
 
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  // If not authenticated, only show AuthPage routes
+  if (!user) {
+    return (
+      <ChakraProvider value={defaultSystem}>
+        <QueryClientProvider client={queryClient}>
+          <AgentProvider>
+            <AuthProvider>
+              <main className="flex-1 p-4 md:p-8">
+                <Switch>
+                  <Route path="/auth" component={AuthPage} />
+                  <Route path="/login" component={AuthPage} />
+                  <Route path="/register" component={AuthPage} />
+                  <Route component={NotFound} />
+                </Switch>
+                <Toaster />
+              </main>
+            </AuthProvider>
+          </AgentProvider>
+        </QueryClientProvider>
+      </ChakraProvider>
+    );
+  }
+
+  // Authenticated: show full app
   return (
     <ChakraProvider value={defaultSystem}>
       <QueryClientProvider client={queryClient}>
