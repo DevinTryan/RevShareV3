@@ -15,9 +15,9 @@ try {
   console.log('Installing esbuild globally...');
   execSync('npm install -g esbuild', { stdio: 'inherit' });
   
-  // Build the client-side code
+  // Build the client-side code with proper React support
   console.log('Building client-side code...');
-  execSync('npx esbuild client/src/main.tsx --bundle --minify --outfile=dist/client.js', { stdio: 'inherit' });
+  execSync('npx esbuild client/src/main.tsx --bundle --minify --sourcemap --loader:.js=jsx --loader:.ts=tsx --define:process.env.NODE_ENV=\\"production\\" --outfile=dist/client.js', { stdio: 'inherit' });
   
   // Create index.html in dist
   console.log('Creating index.html...');
@@ -28,6 +28,9 @@ try {
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Revenue Share Calculator</title>
     <link rel="stylesheet" href="/client.css" />
+    <script>
+      window.global = window;
+    </script>
   </head>
   <body>
     <div id="root"></div>
@@ -49,6 +52,14 @@ try {
     execSync('mkdir -p dist/public && cp -r public/* dist/public/ || true', { stdio: 'inherit' });
   } catch (e) {
     console.log('No public directory found, skipping...');
+  }
+  
+  // Copy client assets
+  console.log('Copying client assets...');
+  try {
+    execSync('mkdir -p dist/assets && cp -r client/src/assets/* dist/assets/ || true', { stdio: 'inherit' });
+  } catch (e) {
+    console.log('No client assets directory found, skipping...');
   }
   
   // Build the server-side code using the production version

@@ -33,10 +33,14 @@ export function serveStatic(app: Express) {
     );
   }
 
-  app.use(express.static(distPath));
+  // Serve static files from the dist directory
+  app.use(express.static(distPath, {
+    index: false, // Don't automatically serve index.html for the root path
+    maxAge: '1d' // Cache static assets for 1 day
+  }));
 
-  // fall through to index.html if the file doesn't exist
-  app.use("*", (_req, res) => {
+  // For any non-API route, serve the index.html file
+  app.get(/^(?!\/api\/).*/, (req, res) => {
     res.sendFile(path.resolve(distPath, "index.html"));
   });
 }
