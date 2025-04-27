@@ -10,13 +10,16 @@ app.use(express.urlencoded({ extended: false }));
 // CORS middleware: allow frontend onrender domain and credentials
 app.use(
   cors({
-    origin: [
-      "https://revenue-share-calculator-frontend.onrender.com",
-      "https://revenue-share-calculator-frontend.onrender.com/",
-      "https://revenue-share-calculator-frontend.onrender.com/login",
-      "https://revenue-share-calculator-frontend.onrender.com/register",
-      "https://revenue-share-calculator-frontend.onrender.com/auth"
-    ],
+    origin: function (origin, callback) {
+      const allowedOrigins = [
+        "https://revenue-share-calculator-frontend.onrender.com"
+      ];
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error('Not allowed by CORS'));
+      }
+    },
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],
@@ -25,13 +28,16 @@ app.use(
 
 // Handle preflight requests
 app.options("*", cors({
-  origin: [
-    "https://revenue-share-calculator-frontend.onrender.com",
-    "https://revenue-share-calculator-frontend.onrender.com/",
-    "https://revenue-share-calculator-frontend.onrender.com/login",
-    "https://revenue-share-calculator-frontend.onrender.com/register",
-    "https://revenue-share-calculator-frontend.onrender.com/auth"
-  ],
+  origin: function (origin, callback) {
+    const allowedOrigins = [
+      "https://revenue-share-calculator-frontend.onrender.com"
+    ];
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   credentials: true,
   methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization"],
