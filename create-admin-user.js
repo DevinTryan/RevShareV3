@@ -1,16 +1,28 @@
-import { storage } from './server/storage.js';
-import { hashPassword } from './server/security.js';
-import { UserRole } from './shared/schema.js';
+// This script must be run with tsx to support TypeScript imports
+import { MongoDBStorage } from './server/storage-mongodb';
+import { hashPassword } from './server/security';
+import { UserRole } from './shared/schema';
+import { connectToMongoDB } from './server/db/mongodb';
 
 // Create a test admin user
 async function createAdminUser() {
   try {
+    console.log('Initializing MongoDB connection...');
+    await connectToMongoDB();
+    
+    // Create a new storage instance and wait for initialization
+    console.log('Initializing MongoDB storage...');
+    const storage = new MongoDBStorage();
+    
+    // Wait a bit for initialization to complete
+    await new Promise(resolve => setTimeout(resolve, 2000));
+    
     console.log('Creating admin user...');
     
     // Check if user already exists
     const existingUser = await storage.getUserByUsername('admin');
     if (existingUser) {
-      console.log('Admin user already exists');
+      console.log('Admin user already exists:', existingUser);
       process.exit(0);
     }
     

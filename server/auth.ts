@@ -101,10 +101,28 @@ export function setupAuth(app: Express) {
           return done(null, false, { message: 'Account is locked due to too many failed attempts' });
         }
 
-        // Compare password using bcrypt
-        console.log(`Comparing password for ${username}...`);
-        const isMatch = await comparePassword(password, user.password);
-        console.log(`Password match result for ${username}: ${isMatch}`);
+        // Try to compare password using both methods
+        let isMatch = false;
+        
+        // First try bcrypt (from security.ts)
+        try {
+          console.log(`Trying bcrypt comparison for ${username}...`);
+          isMatch = await comparePassword(password, user.password);
+          console.log(`Bcrypt comparison result for ${username}: ${isMatch}`);
+        } catch (err: any) {
+          console.log(`Bcrypt comparison failed, will try scrypt next: ${err.message}`);
+        }
+        
+        // If bcrypt fails, try scrypt (from auth.ts)
+        if (!isMatch && user.password.includes('.')) {
+          try {
+            console.log(`Trying scrypt comparison for ${username}...`);
+            isMatch = await comparePasswords(password, user.password);
+            console.log(`Scrypt comparison result for ${username}: ${isMatch}`);
+          } catch (err: any) {
+            console.log(`Scrypt comparison failed: ${err.message}`);
+          }
+        }
         
         if (!isMatch) {
           console.log(`Login failed: Invalid password for ${username}`);
@@ -123,7 +141,7 @@ export function setupAuth(app: Express) {
         // Return the user object for authentication
         console.log(`Authentication successful for ${username}`);
         return done(null, user);
-      } catch (error) {
+      } catch (error: any) {
         console.error("Authentication error:", error);
         return done(error);
       }
@@ -150,7 +168,7 @@ export function setupAuth(app: Express) {
         isLocked: user.isLocked ?? false
       };
       done(null, userForAuth as Express.User);
-    } catch (error) {
+    } catch (error: any) {
       done(error);
     }
   });
@@ -209,7 +227,7 @@ export function setupAuth(app: Express) {
         }
         return res.status(201).json(user);
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error("Registration error:", error);
       res.status(500).json({ message: "Error creating user" });
     }
@@ -253,7 +271,7 @@ export function setupAuth(app: Express) {
 
   // Logout endpoint
   app.post("/api/auth/logout", (req: Request, res: Response) => {
-    req.logout((err) => {
+    req.logout((err: any) => {
       if (err) {
         return res.status(500).json({ message: "Error during logout" });
       }
