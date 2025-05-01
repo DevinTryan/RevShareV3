@@ -84,28 +84,6 @@ export function setupAuth(app: Express) {
       try {
         console.log(`Attempting login for user: ${username}`);
         
-        // TEMPORARY: Create a hardcoded admin user for testing
-        // This bypasses the database authentication for testing purposes
-        const tempUser = {
-          id: 1,
-          username: username || 'admin',
-          email: 'admin@example.com',
-          role: UserRole.ADMIN,
-          agentId: null,
-          createdAt: new Date(),
-          lastLogin: new Date(),
-          failedLoginAttempts: 0,
-          isLocked: false,
-          lockExpiresAt: null,
-          resetToken: null,
-          resetTokenExpiry: null,
-          password: 'hashed-password-not-used'
-        };
-        
-        console.log(`TEMPORARY: Using hardcoded user for login: ${username}`);
-        return done(null, tempUser);
-        
-        /* Original authentication code - commented out for testing
         // Get user from database
         const user = await storage.getUserByUsername(username);
         
@@ -145,7 +123,6 @@ export function setupAuth(app: Express) {
         // Return the user object for authentication
         console.log(`Authentication successful for ${username}`);
         return done(null, user);
-        */
       } catch (error) {
         console.error("Authentication error:", error);
         return done(error);
@@ -260,32 +237,16 @@ export function setupAuth(app: Express) {
         return res.status(401).json({ message: info?.message || "Invalid credentials" });
       }
       
-      // Ensure user object has all required properties
-      const userForAuth = {
-        id: user?.id || 1,
-        username: user?.username || 'admin5',
-        email: user?.email || 'admin@example.com',
-        role: user?.role || UserRole.ADMIN,
-        agentId: user?.agentId,
-        createdAt: user?.createdAt || new Date(),
-        lastLogin: new Date(),
-        failedLoginAttempts: 0,
-        isLocked: false,
-        lockExpiresAt: null,
-        resetToken: user?.resetToken,
-        resetTokenExpiry: user?.resetTokenExpiry
-      };
+      console.log("User authenticated, establishing session for:", user.username);
       
-      console.log("User authenticated, establishing session for:", userForAuth.username);
-      
-      req.login(userForAuth, (err: any) => {
+      req.login(user, (err: any) => {
         if (err) {
           console.error("Login session error:", err);
           return res.status(500).json({ message: "Error during login" });
         }
         
-        console.log("Login successful, session established for:", userForAuth.username);
-        return res.status(200).json(userForAuth);
+        console.log("Login successful, session established for:", user.username);
+        return res.status(200).json(user);
       });
     })(req, res, next);
   });
