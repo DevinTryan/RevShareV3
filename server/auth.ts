@@ -62,14 +62,15 @@ export function setupAuth(app: Express) {
   // Configure session
   const sessionSettings: session.SessionOptions = {
     secret: process.env.SESSION_SECRET || "talk-realty-session-secret",
-    resave: false,
+    resave: true, // Changed to true to ensure session is saved on each request
     saveUninitialized: false,
     store: storage.sessionStore,
     cookie: {
       maxAge: 1000 * 60 * 60 * 24, // 1 day
-      secure: false, // Don't require HTTPS for local development
+      secure: process.env.NODE_ENV === 'production', // Only use secure in production
       sameSite: 'lax', // Use lax for better compatibility
-      httpOnly: true // Prevent JavaScript access (security best practice)
+      httpOnly: true, // Prevent JavaScript access (security best practice)
+      path: '/' // Explicitly set the cookie path
     }
   };
 
@@ -77,6 +78,20 @@ export function setupAuth(app: Express) {
   app.use(session(sessionSettings));
   app.use(passport.initialize());
   app.use(passport.session());
+
+  // In development, ensure cookies work with different ports
+  if (process.env.NODE_ENV !== 'production') {
+    console.log('Configuring session for development environment');
+    // Add debug logging for session - AFTER passport is initialized
+    app.use((req, res, next) => {
+      console.log('Session ID:', req.sessionID);
+      console.log('Is Authenticated:', req.isAuthenticated());
+      if (req.user) {
+        console.log('User:', req.user.username);
+      }
+      next();
+    });
+  }
 
   // Configure Local Strategy
   passport.use(

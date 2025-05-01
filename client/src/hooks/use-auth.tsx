@@ -68,8 +68,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       console.log("Login successful for:", user.username);
       queryClient.setQueryData(["/api/auth/user"], user);
       
-      // Force a hard redirect to the dashboard
-      window.location.href = '/';
+      // Use a timeout to ensure the session is properly established before navigation
+      setTimeout(() => {
+        // Use history navigation instead of hard redirect
+        window.location.replace('/');
+      }, 100);
       
       toast({
         title: "Login successful",
