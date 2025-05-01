@@ -99,7 +99,7 @@ app.use((req, res, next) => {
   const port = process.env.PORT || 8080;
   server.listen({
     port,
-    host: "0.0.0.0",
+    host: '0.0.0.0',
     reusePort: true,
   }, () => {
     log(`serving on port ${port}`);
