@@ -73,11 +73,6 @@ export default function AuthPage() {
     
     try {
       loginMutation.mutate(values, {
-        onSuccess: () => {
-          console.log("Login successful, redirecting to dashboard");
-          // Force a hard redirect to the dashboard
-          window.location.href = '/';
-        },
         onError: (error) => {
           console.error("Login error in form handler:", error);
         }

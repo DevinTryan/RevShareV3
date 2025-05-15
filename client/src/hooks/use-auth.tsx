@@ -9,6 +9,7 @@ import { getQueryFn, apiRequest, queryClient } from "../lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { z } from "zod";
 import { loginSchema } from "../lib/schemas";
+import { useLocation } from "wouter";
 
 type AuthContextType = {
   user: User | null;
@@ -25,6 +26,8 @@ export const AuthContext = createContext<AuthContextType | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const { toast } = useToast();
+  const [, navigate] = useLocation();
+  
   const {
     data: user,
     error,
@@ -68,11 +71,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       console.log("Login successful for:", user.username);
       queryClient.setQueryData(["/api/auth/user"], user);
       
-      // Use a timeout to ensure the session is properly established before navigation
-      setTimeout(() => {
-        // Use history navigation instead of hard redirect
-        window.location.replace('/');
-      }, 100);
+      // Use wouter's navigate instead of window.location.replace
+      navigate('/');
       
       toast({
         title: "Login successful",
@@ -100,6 +100,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     },
     onSuccess: (user: User) => {
       queryClient.setQueryData(["/api/auth/user"], user);
+      navigate('/');
       toast({
         title: "Registration successful",
         description: `Welcome, ${user.username}!`,
@@ -124,6 +125,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     },
     onSuccess: () => {
       queryClient.setQueryData(["/api/auth/user"], null);
+      navigate('/auth');
       toast({
         title: "Logged out",
         description: "You have been successfully logged out.",
