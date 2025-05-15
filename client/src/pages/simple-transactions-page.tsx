@@ -29,7 +29,7 @@ export default function SimpleTransactionsPage() {
 
   // Handle click on a transaction
   const handleTransactionClick = (transactionId: number) => {
-    navigate(`/simple-transactions/${transactionId}`);
+    navigate(`/transactions/${transactionId}`);
   };
 
   if (isLoading) {
@@ -54,7 +54,7 @@ export default function SimpleTransactionsPage() {
     <div className="container mx-auto py-8">
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-3xl font-bold">Transactions</h1>
-        <Link href="/simple-transaction/new">
+        <Link href="/transactions/new">
           <Button className="flex items-center gap-2">
             <Plus className="h-4 w-4" />
             New Transaction
@@ -67,7 +67,7 @@ export default function SimpleTransactionsPage() {
           <CardContent className="py-10">
             <div className="text-center">
               <p className="text-muted-foreground">No transactions found.</p>
-              <Link href="/simple-transaction/new">
+              <Link href="/transactions/new">
                 <Button variant="link" className="mt-2">
                   Create your first transaction
                 </Button>
@@ -117,7 +117,7 @@ export default function SimpleTransactionsPage() {
                         className="inline-flex items-center gap-1"
                         onClick={(e) => {
                           e.stopPropagation(); // Prevent row click
-                          navigate(`/simple-transactions/${transaction.id}`);
+                          navigate(`/transactions/${transaction.id}`);
                         }}
                       >
                         <Edit className="h-3.5 w-3.5" />

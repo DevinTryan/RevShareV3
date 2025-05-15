@@ -53,6 +53,7 @@ function AppRoutes() {
       <ProtectedRoute path="/agents" component={AgentsPage} />
       <ProtectedRoute path="/agents/:id" component={SimpleTransactionPage} />
       <ProtectedRoute path="/transactions" component={SimpleTransactionsPage} />
+      <ProtectedRoute path="/transactions/new" component={SimpleTransactionPage} />
       <ProtectedRoute path="/transactions/:id" component={SimpleTransactionPage} />
       <ProtectedRoute path="/revenue-share" component={RevenueSharePage} />
       <ProtectedRoute path="/reports" component={ReportsPage} />

@@ -16,11 +16,11 @@ const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
   const navItems = [
     { path: "/", label: "Dashboard", icon: "ri-dashboard-line" },
     { path: "/agents", label: "Agents", icon: "ri-user-line" },
-    { path: "/simple-transactions", label: "Transactions", icon: "ri-file-list-3-line" },
+    { path: "/transactions", label: "Transactions", icon: "ri-file-list-3-line" },
     { path: "/revenue-share", label: "Revenue Share", icon: "ri-money-dollar-circle-line" },
     { path: "/reports", label: "Reports", icon: "ri-bar-chart-line" },
     { path: "/settings", label: "Settings", icon: "ri-settings-line" },
-    { path: "/integrations/zapier", label: "Zapier", icon: "ri-link-m" },
+    { path: "/settings/zapier", label: "Zapier", icon: "ri-link-m" },
   ];
 
   return (
