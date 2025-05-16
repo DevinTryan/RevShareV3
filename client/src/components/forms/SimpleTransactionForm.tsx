@@ -113,12 +113,12 @@ export default function SimpleTransactionForm({ transaction }: SimpleTransaction
       return await response.json();
     },
     onSuccess: () => {
-      toast({
-        title: "Transaction created",
-        description: "The transaction was successfully created",
-      });
       queryClient.invalidateQueries({ queryKey: ['/api/transactions'] });
-      navigate("/simple-transactions");
+      toast({
+        title: "Success",
+        description: "Transaction created successfully",
+      });
+      navigate("/transactions");
     },
     onError: (error: Error) => {
       toast({
@@ -163,12 +163,12 @@ export default function SimpleTransactionForm({ transaction }: SimpleTransaction
       return await response.json();
     },
     onSuccess: () => {
-      toast({
-        title: "Transaction updated",
-        description: "The transaction was successfully updated",
-      });
       queryClient.invalidateQueries({ queryKey: ['/api/transactions'] });
-      navigate("/simple-transactions");
+      toast({
+        title: "Success",
+        description: "Transaction updated successfully",
+      });
+      navigate("/transactions");
     },
     onError: (error: Error) => {
       toast({

@@ -7,10 +7,9 @@ import SimpleTransactionForm from "@/components/forms/SimpleTransactionForm";
 
 export default function SimpleTransactionPage() {
   const [location] = useLocation();
-  const isNewTransaction = location === "/simple-transaction/new";
+  const isNewTransaction = location === "/transactions/new";
   
   // Extract transaction ID from path
-  // Handle both /simple-transaction/123 and /simple-transactions/123 formats
   const pathParts = location.split("/");
   const lastPart = pathParts[pathParts.length - 1];
   const transactionId = !isNewTransaction && !isNaN(parseInt(lastPart, 10)) ? 
@@ -29,7 +28,7 @@ export default function SimpleTransactionPage() {
   return (
     <div className="container max-w-4xl mx-auto py-8">
       <div className="mb-6">
-        <Link href="/simple-transactions">
+        <Link href="/transactions">
           <Button variant="ghost" className="flex items-center gap-2 p-0 hover:bg-transparent">
             <ArrowLeft className="h-4 w-4" />
             <span>Back to Transactions</span>

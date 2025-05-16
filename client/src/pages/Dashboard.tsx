@@ -135,14 +135,14 @@ const Dashboard = () => {
 
         <Button
           className="inline-flex items-center bg-green-500 hover:bg-green-600"
-          onClick={() => navigate("/simple-transactions")}
+          onClick={() => navigate("/transactions")}
         >
           <i className="ri-eye-line mr-2"></i> View Transactions
         </Button>
 
         <Button
           className="inline-flex items-center bg-blue-500 hover:bg-blue-600"
-          onClick={() => navigate("/simple-transaction/new")}
+          onClick={() => navigate("/transactions/new")}
         >
           <i className="ri-add-circle-line mr-2"></i> New Transaction
         </Button>
@@ -199,8 +199,12 @@ const Dashboard = () => {
               {!Array.isArray(transactions) || transactions.length === 0 ? (
                 <div className="text-center py-4">
                   <p className="text-muted-foreground">No transactions found</p>
-                  <Button variant="link" onClick={() => navigate("/simple-transaction/new")} className="mt-2">
-                    Create your first transaction
+                  <Button 
+                    variant="link" 
+                    onClick={() => navigate("/transactions/new")} 
+                    className="mt-2"
+                  >
+                    Add your first transaction
                   </Button>
                 </div>
               ) : (
@@ -210,10 +214,10 @@ const Dashboard = () => {
                   </p>
                   <Button 
                     variant="outline" 
-                    className="w-full" 
-                    onClick={() => navigate("/simple-transactions")}
+                    className="w-full"
+                    onClick={() => navigate("/transactions")}
                   >
-                    <i className="ri-eye-line mr-2"></i> View All Transactions
+                    View All Transactions
                   </Button>
                 </div>
               )}
