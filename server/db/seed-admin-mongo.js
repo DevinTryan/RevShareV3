@@ -1,8 +1,18 @@
 import { MongoClient } from 'mongodb';
 import bcrypt from 'bcrypt';
+import dotenv from 'dotenv';
 
-const uri = "mongodb+srv://devin:rwSiigf8Kb09BkvG@cluster0.c3xfsbp.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0";
-const dbName = "revenueShareCalculator";
+// Load environment variables
+dotenv.config();
+
+// Get MongoDB URI from environment variable
+const uri = process.env.MONGODB_URI;
+const dbName = process.env.MONGODB_DB_NAME || "revenueShareCalculator";
+
+if (!uri) {
+  console.error('MONGODB_URI environment variable is not set');
+  process.exit(1);
+}
 
 async function seedAdmin() {
   try {
