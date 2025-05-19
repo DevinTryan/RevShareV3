@@ -10,7 +10,7 @@ import {
   User,
   agents,
   transactions
-} from "@shared/schema";
+} from "../shared/schema.js";
 import { z } from "zod";
 import { ZodError } from "zod";
 import { fromZodError } from "zod-validation-error";
@@ -710,6 +710,97 @@ export async function registerRoutes(app: Express): Promise<Server> {
     triggerWebhooks('agent.created', agent);
     return agent;
   };
+
+  // Registration endpoint
+  app.post("/api/auth/register", async (req: Request, res: Response) => {
+    try {
+      const userData = req.body;
+
+      // Prevent admin registration through API
+      if (userData.role === UserRole.ADMIN) {
+        return res.status(403).json({ message: "Admin registration is not allowed" });
+      }
+
+      // Validate registration code
+      const registrationCode = userData.registrationCode;
+      if (!registrationCode) {
+        return res.status(400).json({ message: "Registration code is required" });
+      }
+
+      // Check if registration code exists and is unused
+      const existingCode = await db.query.registrationCodes.findFirst({
+        where: (codes, { eq, and }) => and(
+          eq(codes.code, registrationCode),
+          eq(codes.used, 0)
+        )
+      });
+
+      if (!existingCode) {
+        return res.status(400).json({ message: "Invalid or used registration code" });
+      }
+
+      // Hash the password
+      const hashedPassword = await hashPassword(userData.password);
+
+      // Create the user
+      const user = await db.insert(users).values({
+        username: userData.username,
+        email: userData.email,
+        password: hashedPassword,
+        role: UserRole.AGENT, // Force role to be agent
+        agentId: userData.agentId
+      });
+
+      // Mark registration code as used
+      await db.update(registrationCodes)
+        .set({ 
+          used: 1,
+          usedBy: user.id,
+          usedAt: new Date().toISOString()
+        })
+        .where(eq(registrationCodes.code, registrationCode));
+
+      res.status(201).json(user);
+    } catch (error) {
+      console.error("Registration error:", error);
+      res.status(500).json({ message: "Registration failed" });
+    }
+  });
+
+  // Generate registration code (admin only)
+  app.post("/api/admin/registration-codes", requireAdmin, async (req: Request, res: Response) => {
+    try {
+      // Generate a random 8-character code
+      const code = Math.random().toString(36).substring(2, 10).toUpperCase();
+      
+      // Store the code
+      await db.insert(registrationCodes).values({
+        code,
+        createdBy: (req.user as User).id,
+        createdAt: new Date().toISOString(),
+        used: false
+      });
+
+      res.status(201).json({ code });
+    } catch (error) {
+      console.error("Error generating registration code:", error);
+      res.status(500).json({ message: "Failed to generate registration code" });
+    }
+  });
+
+  // List registration codes (admin only)
+  app.get("/api/admin/registration-codes", requireAdmin, async (req: Request, res: Response) => {
+    try {
+      const codes = await db.query.registrationCodes.findMany({
+        orderBy: (codes, { desc }) => [desc(codes.createdAt)]
+      });
+      
+      res.json(codes);
+    } catch (error) {
+      console.error("Error fetching registration codes:", error);
+      res.status(500).json({ message: "Failed to fetch registration codes" });
+    }
+  });
 
   // Create server
   const httpServer = createServer(app);

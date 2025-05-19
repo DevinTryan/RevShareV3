@@ -25,6 +25,7 @@ type LoginFormValues = z.infer<typeof loginFormSchema>;
 // Registration form schema based on user schema
 const registrationFormSchema = insertUserSchema.extend({
   confirmPassword: z.string().min(1, "Please confirm your password"),
+  registrationCode: z.string().min(1, "Registration code is required"),
 }).refine((data) => data.password === data.confirmPassword, {
   message: "Passwords do not match",
   path: ["confirmPassword"],
@@ -54,7 +55,8 @@ export default function AuthPage() {
       password: "",
       confirmPassword: "",
       email: "",
-      role: UserRole.AGENT,
+      registrationCode: "",
+      role: UserRole.AGENT, // Always set to AGENT
       agentId: undefined,
     },
   });
@@ -86,6 +88,8 @@ export default function AuthPage() {
   const onRegisterSubmit = (values: RegistrationFormValues) => {
     // Remove confirmPassword as it's not part of the API schema
     const { confirmPassword, ...userValues } = values;
+    // Ensure role is always set to agent
+    userValues.role = UserRole.AGENT;
     registerMutation.mutate(userValues);
   };
 
@@ -213,67 +217,60 @@ export default function AuthPage() {
                         </FormItem>
                       )}
                     />
-                    
+
                     <FormField
                       control={registrationForm.control}
-                      name="role"
+                      name="registrationCode"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Role</FormLabel>
-                          <Select onValueChange={field.onChange} defaultValue={field.value}>
-                            <FormControl>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Select a role" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              <SelectItem value={UserRole.ADMIN}>Administrator</SelectItem>
-                              <SelectItem value={UserRole.AGENT}>Agent</SelectItem>
-                            </SelectContent>
-                          </Select>
+                          <FormLabel>Registration Code</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Enter your registration code" {...field} />
+                          </FormControl>
+                          <FormDescription>
+                            Enter the registration code provided by your administrator
+                          </FormDescription>
                           <FormMessage />
                         </FormItem>
                       )}
                     />
                     
-                    {registrationForm.watch("role") === UserRole.AGENT && (
-                      <FormField
-                        control={registrationForm.control}
-                        name="agentId"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Select Your Agent Profile</FormLabel>
-                            <Select 
-                              onValueChange={(value) => field.onChange(parseInt(value))}
-                              value={field.value?.toString() || ""}
-                            >
-                              <FormControl>
-                                <SelectTrigger>
-                                  <SelectValue placeholder="Select your agent profile" />
-                                </SelectTrigger>
-                              </FormControl>
-                              <SelectContent>
-                                {isLoadingAgents ? (
-                                  <div className="flex justify-center items-center p-2">
-                                    <Loader2 className="h-4 w-4 animate-spin" />
-                                  </div>
-                                ) : (
-                                  agentsList.map((agent) => (
-                                    <SelectItem key={agent.id} value={agent.id.toString()}>
-                                      {agent.name}
-                                    </SelectItem>
-                                  ))
-                                )}
-                              </SelectContent>
-                            </Select>
-                            <FormDescription>
-                              Link your account to your agent profile
-                            </FormDescription>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                    )}
+                    <FormField
+                      control={registrationForm.control}
+                      name="agentId"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Select Your Agent Profile</FormLabel>
+                          <Select 
+                            onValueChange={(value) => field.onChange(parseInt(value))}
+                            value={field.value?.toString() || ""}
+                          >
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select your agent profile" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {isLoadingAgents ? (
+                                <div className="flex justify-center items-center p-2">
+                                  <Loader2 className="h-4 w-4 animate-spin" />
+                                </div>
+                              ) : (
+                                agentsList.map((agent) => (
+                                  <SelectItem key={agent.id} value={agent.id.toString()}>
+                                    {agent.name}
+                                  </SelectItem>
+                                ))
+                              )}
+                            </SelectContent>
+                          </Select>
+                          <FormDescription>
+                            Link your account to your agent profile
+                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
                     
                     <Button 
                       type="submit" 

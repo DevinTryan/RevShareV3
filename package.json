@@ -19,7 +19,9 @@
     "test": "jest --config jest.config.js",
     "test:watch": "jest --watchAll --config jest.config.js",
     "dev:all": "concurrently \"npm run dev --prefix server\" \"npm run dev --prefix client\"",
-    "test:all": "npm run test"
+    "test:all": "npm run test",
+    "migrate": "ts-node server/db/migrate.ts",
+    "seed-admin": "ts-node server/db/seed-admin.ts"
   },
   "dependencies": {
     "@chakra-ui/next-js": "^2.4.2",
@@ -60,6 +62,7 @@
     "@tanstack/react-query": "^5.60.5",
     "@types/bcrypt": "^5.0.2",
     "bcrypt": "^5.1.1",
+    "better-sqlite3": "^11.10.0",
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.1.1",
     "cmdk": "^1.0.0",

@@ -1,7 +1,7 @@
 import { pgTable, text, serial, integer, boolean, doublePrecision, timestamp, foreignKey, pgEnum, jsonb } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
-import { CONFIG } from "./config";
+import { CONFIG } from "./config.js";
 
 // Agent types
 export enum AgentType {
